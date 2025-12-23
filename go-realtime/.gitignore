@@ -1,0 +1,18 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+# Test files
+*.test
+*.out
+# Go workspace
+go.work
+# Environment
+.env
+.env.local
+# IDE
+.idea/
+.vscode/
