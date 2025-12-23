@@ -1,72 +1,148 @@
-# ExPol - Marketplace Universitario 🎓🛒
+# ExPol - Marketplace Universitario
 
-ExPol es una plataforma centralizada de compra y venta diseñada exclusivamente para la comunidad de la **ESPOL**. Permite a los estudiantes intercambiar libros, equipos tecnológicos y otros bienes de forma segura, organizada y confiable.
+Backend del sistema de marketplace para la comunidad universitaria ESPOL.
 
-## 🚀 Características Principales
+## Arquitectura
 
-- **Autenticación Institucional:** Registro obligatorio con correo `@espol.edu.ec`.
-- **Arquitectura Híbrida:** Backend robusto en Ruby on Rails y servicios en tiempo real optimizados en Go.
-- **Mensajería en Tiempo Real:** Chat interno para negociaciones directas.
-- **Filtros Avanzados:** Búsqueda por categorías, precio, estado del producto y ubicación.
+El proyecto está dividido en dos servicios principales:
 
----
+- **Rails API** (`/rails-api`): Servicio principal con toda la lógica de negocio
+- **Go Realtime Service** (`/go-realtime`): Servicio de mensajería en tiempo real
 
-## 🏗️ Arquitectura del Sistema
+## Requisitos Previos
 
-El proyecto utiliza un enfoque de microservicios para separar la lógica de negocio compleja de la comunicación de alta concurrencia.
+- Ruby 3.2+
+- Rails 7.1+
+- PostgreSQL 15+
+- Go 1.21+
+- Redis
+- Node.js 18+ (para frontend)
 
+## Instalación y Configuración
 
+### 1. Clonar el repositorio
 
-- **Frontend:** React 18 + TypeScript + Tailwind CSS.
-- **Main API (Negocio):** Ruby on Rails 7.1 + PostgreSQL 15.
-- **Realtime Service (Chat):** Go 1.21 + WebSockets (Gorilla).
-- **Infraestructura:** Docker & Docker Compose para contenedores.
+```bash
+git clone https://github.com/tu-usuario/expol-marketplace.git
+cd expol-marketplace
+```
 
----
+### 2. Configurar Rails API
 
-## 👥 Integrantes y Responsabilidades
+```bash
+cd rails-api
+bundle install
+rails db:create db:migrate db:seed
+rails server -p 3000
+```
 
-| Integrante | Componente | Responsabilidad Principal |
-| :--- | :--- | :--- |
-| **Alexandre Icaza** | Backend (Rails) | Gestión de publicaciones (CRUD), carga de imágenes y listados. |
-| **Jose Luis Chong** | Realtime (Go) | Sistema de chat en tiempo real, notificaciones push y gestión de mensajes. |
-| **Alex Otero Limones** | Backend (Rails) | Motor de búsqueda avanzada, perfiles de usuario y sistema de favoritos. |
+### 3. Configurar Go Realtime Service
 
----
+```bash
+cd go-realtime
+go mod download
+go run main.go
+```
 
-## 🛠️ Tecnologías Utilizadas
+### 4. Variables de Entorno
 
-### Backend
-- **Ruby on Rails:** Framework principal para la lógica de negocio [1].
-- **Go (Golang):** Servicio especializado en WebSockets por su eficiencia en concurrencia [2].
-- **PostgreSQL:** Base de datos relacional para persistencia de datos [5].
-- **Redis:** Gestión de cache y sesiones de chat.
+Crear archivo `.env` en cada servicio:
 
-### Frontend
-- **React & TypeScript:** SPA para una interfaz reactiva y tipada [3][4].
-- **Tailwind CSS:** Diseño responsive y moderno.
+**rails-api/.env**
+```
+DATABASE_URL=postgresql://localhost/expol_development
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET=tu_jwt_secret_aqui
+AWS_ACCESS_KEY_ID=tu_aws_key
+AWS_SECRET_ACCESS_KEY=tu_aws_secret
+AWS_REGION=us-east-1
+AWS_BUCKET=expol-images
+SENDGRID_API_KEY=tu_sendgrid_key
+```
 
----
+**go-realtime/.env**
+```
+DATABASE_URL=postgresql://localhost/expol_development
+REDIS_URL=redis://localhost:6379/1
+PORT=8080
+JWT_SECRET=tu_jwt_secret_aqui
+```
 
-## 📦 Instalación y Configuración (Desarrollo)
+## Endpoints Principales
 
-### Prerrequisitos
-- Docker y Docker Compose
-- Ruby 3.2.x (opcional para local)
-- Go 1.21+ (opcional para local)
+### Autenticación
+- `POST /api/v1/auth/register` - Registro de usuario
+- `POST /api/v1/auth/login` - Inicio de sesión
+- `POST /api/v1/auth/verify-email` - Verificación de correo
 
-### Pasos
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [https://github.com/tu-usuario/expol-marketplace.git](https://github.com/tu-usuario/expol-marketplace.git)
-   cd expol-marketplace
-   ```
-2.  **Levantar servicios con Docker:**
-    ```bash
-    docker-compose up --build
-    ```
-2.  **Configurar base de datos (Rails):**
-    ```bash
-    docker-compose run web rails db:create db:migrate
-    ```
-    
+### Publicaciones (Alexandre Icaza)
+- `POST /api/v1/listings` - Crear publicación
+- `GET /api/v1/listings` - Listar publicaciones
+- `GET /api/v1/listings/:id` - Ver publicación
+- `PUT /api/v1/listings/:id` - Editar publicación
+- `DELETE /api/v1/listings/:id` - Eliminar publicación
+
+### Chat (José Chong)
+- `GET /api/v1/conversations` - Listar conversaciones
+- `GET /api/v1/conversations/:id` - Ver conversación
+- `POST /api/v1/conversations/:id/messages` - Enviar mensaje
+- `DELETE /api/v1/conversations/:id` - Eliminar conversación
+- WebSocket: `ws://localhost:8080/ws` - Conexión tiempo real
+
+### Búsqueda y Favoritos (Alex Otero)
+- `GET /api/v1/search` - Búsqueda avanzada
+- `POST /api/v1/favorites` - Agregar a favoritos
+- `GET /api/v1/favorites` - Listar favoritos
+- `DELETE /api/v1/favorites/:id` - Quitar de favoritos
+- `GET /api/v1/users/:id/profile` - Ver perfil de usuario
+
+## Testing
+
+### Rails API
+```bash
+cd rails-api
+rspec
+```
+
+### Go Service
+```bash
+cd go-realtime
+go test ./...
+```
+
+## Docker (Opcional)
+
+```bash
+docker-compose up
+```
+
+## Estructura del Proyecto
+
+```
+expol-marketplace/
+├── rails-api/           # Backend principal (Rails)
+│   ├── app/
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── serializers/
+│   │   └── services/
+│   ├── config/
+│   ├── db/
+│   └── spec/
+├── go-realtime/        # Servicio de mensajería (Go)
+│   ├── handlers/
+│   ├── models/
+│   ├── websocket/
+│   └── main.go
+└── docker-compose.yml
+```
+
+## Contribuidores
+
+- Alexandre Icaza - Sistema de Publicaciones
+- José Chong - Sistema de Mensajería
+- Alex Otero - Búsqueda y Favoritos
+
+## Licencia
+
+MIT License
