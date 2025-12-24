@@ -16,6 +16,34 @@ Rails.application.routes.draw do
         end
       end
     end
+    # Búsqueda Avanzada - Alex Otero
+      get 'search', to: 'search#index'
+      get 'search/suggestions', to: 'search#suggestions'
+      get 'search/categories_stats', to: 'search#categories_stats'
+      
+      # Favoritos - Alex Otero
+      resources :favorites, only: [:index, :create, :destroy] do
+        collection do
+          delete 'remove_by_listing/:listing_id', action: :remove_by_listing
+          get 'check/:listing_id', action: :check
+        end
+      end
+      
+      # Usuarios y Perfiles - Alex Otero
+      resources :users, only: [] do
+        member do
+          get 'profile', action: :show
+          get 'listings'
+          get 'ratings'
+        end
+      end
+      
+      get 'users/me', to: 'users#me'
+      patch 'users/me', to: 'users#update_me'
+      
+      # Calificaciones
+      resources :ratings, only: [:create, :update, :destroy]
+    end
   end
   
   # Health check
