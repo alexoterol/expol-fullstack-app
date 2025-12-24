@@ -15,7 +15,9 @@ class CreateListings < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :listings, :user_id
+    # Elimina esta línea
+    # add_index :listings, :user_id
+
     add_index :listings, :category
     add_index :listings, :status
   end

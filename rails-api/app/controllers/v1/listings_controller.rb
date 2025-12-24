@@ -1,7 +1,6 @@
 # rails-api/app/controllers/api/v1/listings_controller.rb
 # RESPONSABLE: ALEXANDRE ICAZA
-module Api
-  module V1
+module V1
     class ListingsController < ApplicationController
       before_action :authenticate_user!, except: [:index, :show]
       before_action :set_listing, only: [:show, :update, :destroy, :toggle_status]
@@ -158,4 +157,3 @@ module Api
       end
     end
   end
-end
