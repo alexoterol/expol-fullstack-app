@@ -4,7 +4,7 @@ default: &default
   encoding: unicode
   pool: 5
   host: localhost
-  port: 5433
+  port: 5432
   username: postgres
   password: expol_password
 

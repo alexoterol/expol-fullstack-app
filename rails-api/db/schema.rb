@@ -10,9 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_01_01_000002) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_25_161704) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "favorites", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.bigint "listing_id", null: false
+    t.index ["listing_id"], name: "index_favorites_on_listing_id"
+    t.index ["user_id", "listing_id"], name: "index_favorites_on_user_id_and_listing_id", unique: true
+    t.index ["user_id"], name: "index_favorites_on_user_id"
+  end
 
   create_table "listings", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -26,9 +36,23 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_01_000002) do
     t.integer "views_count", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "favorites_count"
     t.index ["category"], name: "index_listings_on_category"
     t.index ["status"], name: "index_listings_on_status"
     t.index ["user_id"], name: "index_listings_on_user_id"
+  end
+
+  create_table "ratings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.bigint "listing_id", null: false
+    t.bigint "rater_id", null: false
+    t.integer "score", null: false
+    t.text "comment"
+    t.index ["listing_id"], name: "index_ratings_on_listing_id"
+    t.index ["rater_id"], name: "index_ratings_on_rater_id"
+    t.index ["user_id"], name: "index_ratings_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -41,5 +65,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_01_000002) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "favorites", "listings"
+  add_foreign_key "favorites", "users"
   add_foreign_key "listings", "users"
+  add_foreign_key "ratings", "listings"
+  add_foreign_key "ratings", "users"
+  add_foreign_key "ratings", "users", column: "rater_id"
 end
