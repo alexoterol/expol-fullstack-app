@@ -1,0 +1,98 @@
+# ==========================================
+# .gitignore para React + Vite + Tailwind
+# ExPol - CampusMarket Frontend
+# ==========================================
+
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Archivos de build y producción
+dist/
+dist-ssr/
+build/
+*.local
+
+# Variables de entorno
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Caché de Vite
+.vite/
+*.sw?
+
+# Editor directories y archivos
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos de sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Coverage y testing
+coverage/
+*.lcov
+.nyc_output
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Lock files opcionales (descomenta si quieres ignorarlos)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Archivos de TypeScript (si usas TS)
+*.tsbuildinfo
+
+# Archivos de Tailwind (si usas v3)
+# .tailwindcss
+
+# Archivos de prueba y debugging
+.eslintcache
+.stylelintcache
+
+# Archivos de Vercel (si deployeas ahí)
+.vercel
+
+# Archivos de Netlify (si deployeas ahí)
+.netlify
+
+# Storybook
+storybook-static/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
