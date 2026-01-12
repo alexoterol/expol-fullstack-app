@@ -30,6 +30,7 @@ const categories = [
   { name: 'Otros', icon: '📦', count: 89 },
 ];
 
+
 // ==================== COMPONENTES ====================
 
 // Navbar
@@ -82,7 +83,7 @@ const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
               <Plus className="w-5 h-5" />
               <span>Publicar</span>
             </button>
-            
+
             <button onClick={() => onNavigate('messages')} className="relative p-2 hover:bg-gray-100 rounded-full">
               <MessageCircle className="w-6 h-6 text-gray-700" />
               {unreadMessages > 0 && (
@@ -160,17 +161,17 @@ const ProductCard = ({ listing, onFavorite, isFavorited, onNavigate }) => {
           <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
         </button>
       </div>
-      
+
       <div className="p-4">
         <h3 className="font-semibold text-gray-800 text-lg mb-2 line-clamp-2">{listing.title}</h3>
         <p className="text-2xl font-bold text-blue-600 mb-2">${listing.price.toFixed(2)}</p>
-        
+
         <div className="flex items-center text-sm text-gray-600 mb-2">
           <MapPin className="w-4 h-4 mr-1" />
           <span>{listing.location}</span>
           <span className="ml-auto px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">{listing.condition}</span>
         </div>
-        
+
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center">
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
@@ -207,13 +208,13 @@ const HomePage = ({ onNavigate, favorites, onFavorite }) => {
   return (
     <div>
       <Hero onNavigate={onNavigate} />
-      
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Publicaciones recientes</h2>
           <button onClick={() => onNavigate('search')} className="text-blue-600 hover:underline">Ver todos</button>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {mockListings.slice(0, 8).map((listing) => (
             <ProductCard
@@ -267,7 +268,7 @@ const SearchPage = ({ initialFilters, favorites, onFavorite, onNavigate }) => {
     let results = [...mockListings];
 
     if (searchQuery) {
-      results = results.filter(l => 
+      results = results.filter(l =>
         l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.category.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -336,11 +337,10 @@ const SearchPage = ({ initialFilters, favorites, onFavorite, onNavigate }) => {
             <button
               key={cat.name}
               onClick={() => setSelectedCategory(cat.name)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === cat.name
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat.name
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               {cat.icon} {cat.name} ({cat.count})
             </button>
@@ -528,6 +528,40 @@ const ProfilePage = ({ userId, onNavigate, currentUserId }) => {
   const userListings = mockListings.filter(l => l.userId === userId);
   const [activeTab, setActiveTab] = useState('publicaciones');
   const isOwnProfile = userId === currentUserId;
+  const [editingListing, setEditingListing] = useState(null);
+  const [listingStatuses, setListingStatuses] = useState({});
+  const [editForm, setEditForm] = useState({
+    title: '',
+    price: '',
+    condition: '',
+    description: ''
+  });
+
+  const handleEditClick = (listing) => {
+    setEditingListing(listing);
+    setEditForm({
+      title: listing.title,
+      price: listing.price,
+      condition: listing.condition,
+      description: 'Descripción del producto...'
+    });
+  };
+
+  const handleSaveEdit = () => {
+    alert(`Publicación "${editForm.title}" actualizada correctamente - Alerta para después conectar con el backend!`);
+    setEditingListing(null);
+  };
+
+  const toggleStatus = (listingId) => {
+    setListingStatuses(prev => ({
+      ...prev,
+      [listingId]: prev[listingId] === 'paused' ? 'active' : 'paused'
+    }));
+  };
+
+  const getListingStatus = (listingId) => {
+    return listingStatuses[listingId] || 'active';
+  };
 
   return (
     <div className="bg-gradient-to-b from-blue-600 to-cyan-500 pb-8">
@@ -580,6 +614,87 @@ const ProfilePage = ({ userId, onNavigate, currentUserId }) => {
           </div>
         </div>
 
+        {/* Modal de Edición */}
+        {editingListing && (
+          <div className="fixed inset-0 backdrop-blur-sm 1 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">Editar Publicación</h2>
+                  <button
+                    onClick={() => setEditingListing(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Título *</label>
+                    <input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Precio (USD) *</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="number"
+                        value={editForm.price}
+                        onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Estado *</label>
+                    <select
+                      value={editForm.condition}
+                      onChange={(e) => setEditForm({ ...editForm, condition: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Nuevo">Nuevo</option>
+                      <option value="Usado">Usado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Descripción</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setEditingListing(null)}
+                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                  >
+                    Guardar cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-lg">
           <div className="border-b">
@@ -625,63 +740,78 @@ const ProfilePage = ({ userId, onNavigate, currentUserId }) => {
                   <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Vendidas (0)</button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {userListings.map((listing) => (
-                    <div key={listing.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                      <div className="relative">
-                        <img src={listing.image} alt={listing.title} className="w-full h-48 object-cover" />
-                        <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">Activo</span>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-800 mb-2">{listing.title}</h3>
-                        <p className="text-2xl font-bold text-blue-600 mb-3">${listing.price.toFixed(2)}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                          <span className="flex items-center">
-                            <Eye className="w-4 h-4 mr-1" />
-                            {listing.views}
-                          </span>
-                          <span className="flex items-center">
-                            <Heart className="w-4 h-4 mr-1" />
-                            {listing.favorites}
-                          </span>
-                          <span className="flex items-center">
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            {Math.floor(listing.favorites / 2)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">Publicado hace {Math.floor(Math.random() * 400)} días</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {activeTab === 'calificaciones' && (
-              <div className="space-y-4">
-                {[
-                  { user: 'María González', rating: 5, comment: '¡Excelente vendedor! El producto llegó en perfectas condiciones.', date: 'Hace 2 días' },
-                  { user: 'Carlos Pérez', rating: 5, comment: 'Muy recomendado, producto tal como se describía.', date: 'Hace 1 semana' },
-                  { user: 'Ana López', rating: 4, comment: 'Buena experiencia, responde rápido.', date: 'Hace 2 semanas' },
-                ].map((review, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gray-300 rounded-full" />
-                        <div>
-                          <p className="font-semibold text-gray-800">{review.user}</p>
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                            ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {userListings.map((listing) => {
+                    const status = getListingStatus(listing.id);
+                    const isPaused = status === 'paused';
+
+                    return (
+                      <div key={listing.id} className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow ${isPaused ? 'opacity-60' : ''}`}>
+                        <div className="relative">
+                          <img src={listing.image} alt={listing.title} className="w-full h-48 object-cover" />
+                          <span className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`}>
+                            {isPaused ? 'Pausado' : 'Activo'}
+                          </span>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-semibold text-gray-800 mb-2">{listing.title}</h3>
+                          <p className="text-2xl font-bold text-blue-600 mb-3">${listing.price.toFixed(2)}</p>
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                            <span className="flex items-center">
+                              <Eye className="w-4 h-4 mr-1" />
+                              {listing.views}
+                            </span>
+                            <span className="flex items-center">
+                              <Heart className="w-4 h-4 mr-1" />
+                              {listing.favorites}
+                            </span>
+                            <span className="flex items-center">
+                              <MessageCircle className="w-4 h-4 mr-1" />
+                              {Math.floor(listing.favorites / 2)}
+                            </span>
                           </div>
+                          <p className="text-xs text-gray-500 mb-4">Publicado hace {Math.floor(Math.random() * 400)} días</p>
+
+                          {isOwnProfile && (
+                            <div className="flex gap-2 pt-3 border-t border-gray-200">
+                              <button
+                                onClick={() => handleEditClick(listing)}
+                                className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center justify-center"
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  toggleStatus(listing.id);
+                                  alert(isPaused ? 'Publicación activada - Alerta para después conectar con el backend!' : 'Publicación pausada - Alerta para después conectar con el backend!');
+                                }}
+                                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${isPaused
+                                  ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                  : 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
+                                  }`}
+                              >
+                                {isPaused ? 'Activar' : 'Pausar'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
+                                    alert('Publicación eliminada - Alerta para después conectar con el backend!');
+                                  }
+                                }}
+                                className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500">{review.date}</span>
-                    </div>
-                    <p className="text-gray-700">{review.comment}</p>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -761,8 +891,8 @@ const ProductDetailPage = ({ listing, onNavigate, onFavorite, isFavorited }) => 
           <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-gray-800 mb-3">Descripción</h3>
             <p className="text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Producto en excelentes condiciones, 
-              muy bien cuidado. Incluye cargador original y caja. Sin rayones ni golpes. 
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Producto en excelentes condiciones,
+              muy bien cuidado. Incluye cargador original y caja. Sin rayones ni golpes.
               Perfecto para estudiantes que necesitan un equipo confiable para sus estudios.
             </p>
           </div>
@@ -974,7 +1104,7 @@ const CreateListingPage = ({ onNavigate }) => {
           {/* Basic Info */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Información básica</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Título del producto *</label>
@@ -1063,7 +1193,7 @@ const CreateListingPage = ({ onNavigate }) => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Fotografías</h2>
             <p className="text-sm text-gray-600 mb-4">Agrega hasta 5 fotos (JPG, PNG - máx 5MB cada una)</p>
-            
+
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer">
               <div className="text-gray-400 mb-2">
                 <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-lg flex items-center justify-center">
