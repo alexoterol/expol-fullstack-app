@@ -30,6 +30,7 @@ const mockUsers = [
   { id: 1, name: 'Alexandre Icaza', username: 'alex_icaza', email: 'alexandre.icaza@espol.edu.ec', rating: 4.8, totalRatings: 15, memberSince: 'Enero 2025', productsCount: 23, soldCount: 15, activeCount: 8 },
   { id: 2, name: 'Jose Chong', username: 'jose_chong', email: 'jose.chong@espol.edu.ec', rating: 4.9, totalRatings: 12, memberSince: 'Enero 2025', productsCount: 18, soldCount: 10, activeCount: 8 },
   { id: 3, name: 'Alex Otero', username: 'alex_otero', email: 'alex.otero@espol.edu.ec', rating: 4.7, totalRatings: 20, memberSince: 'Enero 2025', productsCount: 25, soldCount: 18, activeCount: 7 },
+  { id: 4, name: 'María González', username: 'maria_gonzalez', email: 'maria.gonzalez@espol.edu.ec', rating: 4.6, totalRatings: 8, memberSince: 'Enero 2025', productsCount: 12, soldCount: 7, activeCount: 5 },
 ];
 
 const mockListings = [
