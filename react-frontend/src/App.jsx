@@ -953,148 +953,339 @@ const ProductDetailPage = ({ listing, onNavigate, onFavorite, isFavorited }) => 
   );
 };
 
-// Messages Page
-const MessagesPage = ({ onNavigate }) => {
+const MessagesPage = ({ onNavigate = () => {} }) => {
   const [selectedChat, setSelectedChat] = useState(1);
   const [message, setMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const messagesEndRef = useRef(null);
+  const [messages, setMessages] = useState({
+    1: [
+      { id: 1, text: 'Hola! Me interesa la MacBook', sender: 'them', time: '10:00', read: true, date: '2024-12-12', userId: 2 },
+      { id: 2, text: 'Hola! Claro, está disponible. ¿Tienes alguna pregunta?', sender: 'me', time: '10:05', read: true, date: '2024-12-12', userId: 1 },
+      { id: 3, text: '¿Incluye la caja original?', sender: 'them', time: '10:10', read: true, date: '2024-12-12', userId: 2 },
+      { id: 4, text: 'No incluye la caja, pero si el cargador original y una funda', sender: 'me', time: '10:15', read: true, date: '2024-12-12', userId: 1 },
+      { id: 5, text: 'Hola! ¿Está disponible la laptop?', sender: 'them', time: '14:55', read: false, date: '2024-12-12', userId: 2 },
+    ],
+    2: [
+      { id: 1, text: 'Hola, me interesa el libro', sender: 'them', time: '08:30', read: true, date: '2024-12-11', userId: 3 },
+      { id: 2, text: 'Perfecto, nos vemos mañana entonces', sender: 'them', time: '09:00', read: true, date: '2024-12-11', userId: 3 },
+    ],
+    3: [
+      { id: 1, text: 'Gracias por la compra!', sender: 'them', time: '15:20', read: true, date: '2024-12-10', userId: 4 },
+    ]
+  });
 
   const chats = [
-    { id: 1, user: 'Jose Chong', lastMessage: 'Hola! ¿Está disponible la laptop?', time: 'Hace 5 min', unread: 2, product: 'MacBook Pro 13" M1 2020', online: true },
-    { id: 2, user: 'Alex Otero', lastMessage: 'Perfecto, nos vemos mañana entonces', time: 'Hace 2 horas', unread: 0, product: 'Cálculo I - James Stewart', online: false },
-    { id: 3, user: 'María González', lastMessage: 'Gracias por la compra!', time: 'Ayer', unread: 0, product: null, online: false },
+    {
+      id: 1,
+      userId: 2,
+      user: mockUsers[1].name,
+      lastMessage: 'Hola! ¿Está disponible la laptop?',
+      time: 'Hace 5 min',
+      unread: 2,
+      productId: 1,
+      product: mockListings[0].title,
+      productImage: mockListings[0].image,
+      online: true
+    },
+    {
+      id: 2,
+      userId: 3,
+      user: mockUsers[2].name,
+      lastMessage: 'Perfecto, nos vemos mañana entonces',
+      time: 'Hace 2 horas',
+      unread: 0,
+      productId: 2,
+      product: mockListings[1].title,
+      productImage: mockListings[1].image,
+      online: false
+    },
+    {
+      id: 3,
+      userId: 4,
+      user: mockUsers[3].name,
+      lastMessage: 'Gracias por la compra!',
+      time: 'Ayer',
+      unread: 0,
+      productId: null,
+      product: null,
+      productImage: null,
+      online: false
+    },
   ];
 
-  const messages = [
-    { id: 1, text: 'Hola! Me interesa la MacBook', sender: 'them', time: '10:00' },
-    { id: 2, text: 'Hola! Claro, está disponible. ¿Tienes alguna pregunta?', sender: 'me', time: '10:05' },
-    { id: 3, text: '¿Incluye la caja original?', sender: 'them', time: '10:10' },
-    { id: 4, text: 'No incluye la caja, pero si el cargador original y una funda', sender: 'me', time: '10:15' },
-    { id: 5, text: 'Hola! ¿Está disponible la laptop?', sender: 'them', time: '14:55' },
-  ];
+  const currentChat = chats.find(c => c.id === selectedChat);
+  const currentMessages = messages[selectedChat] || [];
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentMessages]);
+
+  const handleSendMessage = () => {
+    if (!message.trim() || !selectedChat) return;
+
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    const newMessage = {
+      id: Date.now(),
+      text: message.trim(),
+      sender: 'me',
+      time: timeString,
+      read: false,
+      date: now.toISOString().split('T')[0]
+    };
+
+    setMessages(prev => ({
+      ...prev,
+      [selectedChat]: [...(prev[selectedChat] || []), newMessage]
+    }));
+
+    setMessage('');
+  };
+
+  const filteredChats = chats.filter(chat =>
+    chat.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Mensajes</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Mensajes</h1>
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: '600px' }}>
-        <div className="flex h-full">
-          {/* Chat List */}
-          <div className="w-80 border-r border-gray-200 flex flex-col">
-            <div className="p-4 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Buscar conversación..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden" style={{ height: '600px' }}>
+          <div className="flex h-full">
+            {/* Chat List Sidebar */}
+            <div className={`w-full sm:w-96 border-r border-gray-200 flex flex-col ${selectedChat ? 'hidden sm:flex' : 'flex'}`}>
+              {/* Search Header */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar conversación..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Conversations List */}
+              <div className="flex-1 overflow-y-auto">
+                {filteredChats.map((chat) => (
+                  <button
+                    key={chat.id}
+                    onClick={() => setSelectedChat(chat.id)}
+                    className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 text-left transition-colors ${
+                      selectedChat === chat.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Avatar with Online Status */}
+                      <div className="relative shrink-0">
+                        <div className="w-12 h-12 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {chat.user.charAt(0)}
+                        </div>
+                        {chat.online && (
+                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+                        )}
+                      </div>
+
+                      {/* Chat Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-semibold text-gray-900 truncate">{chat.user}</p>
+                          <span className="text-xs text-gray-500 shrink-0 ml-2">{chat.time}</span>
+                        </div>
+
+                        <p className="text-sm text-gray-600 truncate mb-2">{chat.lastMessage}</p>
+
+                        {/* Product Preview */}
+                        {chat.product && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <img
+                              src={chat.productImage}
+                              alt=""
+                              className="w-8 h-8 rounded object-cover shrink-0"
+                            />
+                            <p className="text-xs text-gray-500 truncate">{chat.product}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Unread Badge */}
+                      {chat.unread > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0 font-medium">
+                          {chat.unread}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => setSelectedChat(chat.id)}
-                  className={`w-full p-4 border-b hover:bg-gray-50 text-left ${selectedChat === chat.id ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="relative">
-                      <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-gray-600" />
+            {/* Chat Window */}
+            <div className={`flex-1 flex flex-col ${!selectedChat ? 'hidden sm:flex' : 'flex'}`}>
+              {currentChat ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {/* Back Button - Mobile */}
+                      <button
+                        onClick={() => setSelectedChat(null)}
+                        className="sm:hidden p-2 hover:bg-gray-100 rounded-lg"
+                      >
+                        <ArrowLeft className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      {/* User Info */}
+                      <div className="w-10 h-10 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {currentChat.user.charAt(0)}
                       </div>
-                      {chat.online && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                      )}
+                      <div>
+                        <p className="font-semibold text-gray-900">{currentChat.user}</p>
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          {currentChat.online ? (
+                            <>
+                              <span className="w-2 h-2 bg-green-500 rounded-full" />
+                              <span className="text-green-600 font-medium">En línea</span>
+                            </>
+                          ) : (
+                            'Última vez hace 2h'
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-semibold text-gray-800 truncate">{chat.user}</p>
-                        <span className="text-xs text-gray-500">{chat.time}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 truncate">{chat.lastMessage}</p>
-                      {chat.product && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="w-8 h-8 bg-purple-600 rounded flex-shrink-0" />
-                          <p className="text-xs text-gray-500 truncate">{chat.product}</p>
+
+                    {/* Product Info & Actions */}
+                    <div className="flex items-center gap-3">
+                      {currentChat.product && (
+                        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                          <img
+                            src={currentChat.productImage}
+                            alt=""
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                          <div className="max-w-xs">
+                            <span className="text-sm text-gray-700 font-medium block truncate">{currentChat.product}</span>
+                            <button
+                              onClick={() => onNavigate('detail', mockListings.find(l => l.id === currentChat.productId))}
+                              className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                            >
+                              Ver producto →
+                            </button>
+                          </div>
                         </div>
                       )}
-                    </div>
-                    {chat.unread > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                        {chat.unread}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Chat Window */}
-          <div className="flex-1 flex flex-col">
-            {/* Chat Header */}
-            <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-300 rounded-full" />
-                <div>
-                  <p className="font-semibold text-gray-800">Jose Chong</p>
-                  <p className="text-sm text-green-600 flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-1" />
-                    En línea
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border">
-                  <div className="w-10 h-10 bg-purple-600 rounded" />
-                  <span className="text-sm text-gray-700">MacBook Pro 13" M1 2020</span>
-                  <button onClick={() => onNavigate('detail', mockListings[0])} className="text-blue-600 hover:underline text-sm">
-                    Ver producto
-                  </button>
-                </div>
-                <button className="p-2 hover:bg-gray-200 rounded">⋮</button>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              <div className="text-center text-xs text-gray-500 mb-4">12 de diciembre de 2024</div>
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                  {msg.sender === 'them' && (
-                    <div className="w-8 h-8 bg-gray-300 rounded-full mr-2 flex-shrink-0" />
-                  )}
-                  <div className={`max-w-md px-4 py-2 rounded-lg ${msg.sender === 'me' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`}>
-                    <p>{msg.text}</p>
-                    <div className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-blue-100 text-right' : 'text-gray-500'}`}>
-                      {msg.time} {msg.sender === 'me' && '✓✓'}
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <MoreVertical className="w-5 h-5 text-gray-600" />
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Message Input */}
-            <div className="p-4 border-t bg-white">
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded">
-                  📎
-                </button>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Escribir mensaje..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button className="p-2 hover:bg-gray-100 rounded">
-                  😊
-                </button>
-                <button className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
+                  {/* Messages Area */}
+                  <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                    <div className="space-y-4">
+                      {/* Date Separator */}
+                      <div className="flex items-center justify-center my-4">
+                        <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
+                          12 de diciembre de 2024
+                        </span>
+                      </div>
+
+                      {/* Messages */}
+                      {currentMessages.map((msg) => (
+                        <div key={msg.id} className={`flex gap-2 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          {msg.sender === 'them' && (
+                            <div className="w-8 h-8 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                              {currentChat.user.charAt(0)}
+                            </div>
+                          )}
+
+                          <div className={`max-w-[70%] ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
+                            <div className={`px-4 py-2 rounded-2xl ${
+                              msg.sender === 'me'
+                                ? 'bg-blue-600 text-white rounded-tr-sm'
+                                : 'bg-white text-gray-900 rounded-tl-sm shadow-sm'
+                            }`}>
+                              <p className="text-sm leading-relaxed">{msg.text}</p>
+                            </div>
+
+                            <div className={`flex items-center gap-1 mt-1 text-xs text-gray-500 ${
+                              msg.sender === 'me' ? 'justify-end' : 'justify-start'
+                            }`}>
+                              <span>{msg.time}</span>
+                              {msg.sender === 'me' && (
+                                msg.read ? (
+                                  <CheckCheck className="w-3 h-3 text-blue-500" />
+                                ) : (
+                                  <Check className="w-3 h-3" />
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t border-gray-200 bg-white">
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Paperclip className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      <input
+                        type="text"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder="Escribir mensaje..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Smile className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!message.trim()}
+                        className="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Empty State */
+                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Selecciona una conversación</h3>
+                    <p className="text-gray-500">Elige una conversación para ver los mensajes</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
