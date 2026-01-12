@@ -1,5 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, Search, Plus, MessageCircle, User, Menu, X, Star, MapPin, Filter, ChevronDown, Send, Bell, Edit, Eye } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Heart,
+  Search,
+  Plus,
+  Paperclip,
+  Smile,
+  MoreVertical,
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  MessageCircle,
+  User,
+  Menu,
+  X,
+  Star,
+  MapPin,
+  Filter,
+  ChevronDown,
+  Send,
+  Bell,
+  Edit,
+  Eye
+} from 'lucide-react';
 
 // ==================== SIMULACIÓN DE API ====================
 const API_BASE = 'http://localhost:3000/api/v1';
