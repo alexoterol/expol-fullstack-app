@@ -42,6 +42,15 @@ Rails.application.routes.draw do
 
     # Calificaciones
     resources :ratings, only: [:create, :update, :destroy]
+
+    # Conversaciones y Mensajería - José Chong
+    resources :conversations, only: [:index, :show, :create] do
+      resources :messages, only: [:create] do
+        collection do
+          patch :mark_read
+        end
+      end
+    end
   end
   
   get 'health', to: 'health#check'

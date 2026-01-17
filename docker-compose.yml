@@ -1,0 +1,83 @@
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: expol
+      POSTGRES_PASSWORD: expol_password
+      POSTGRES_DB: expol_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U expol -d expol_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis para cache y pub/sub
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend Rails API
+  rails-api:
+    build:
+      context: ./rails-api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://expol:expol_password@postgres:5432/expol_development
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+      JWT_SECRET: jwt_secret_key_change_in_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./rails-api:/app
+    command: bash -c "bundle exec rails db:prepare && bundle exec rails s -b 0.0.0.0 -p 3000"
+
+  # Servicio Go WebSocket
+  go-realtime:
+    build:
+      context: ./go-realtime
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      PORT: 8080
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Frontend React
+  react-frontend:
+    build:
+      context: ./react-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000/api/v1
+      VITE_WS_URL: ws://localhost:8080/ws
+    volumes:
+      - ./react-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - rails-api
+      - go-realtime
+
+volumes:
+  postgres_data:
