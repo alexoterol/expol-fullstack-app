@@ -1,65 +1,172 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  Heart,
-  Search,
-  Plus,
-  Paperclip,
-  Smile,
-  MoreVertical,
-  ArrowLeft,
-  Check,
-  CheckCheck,
-  MessageCircle,
-  User,
-  Menu,
-  X,
-  Star,
-  MapPin,
-  Filter,
-  ChevronDown,
-  Send,
-  Bell,
-  Edit,
-  Eye
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, Search, Plus, MessageCircle, User, X, Star, MapPin, Filter, ChevronDown, Trash2, LogOut, Send, ArrowLeft } from 'lucide-react';
+import { authService, listingsService, favoritesService, searchService, conversationsService } from './services/api';
 
-// ==================== SIMULACIÓN DE API ====================
-const API_BASE = 'http://localhost:3000/api/v1';
-
-const mockUsers = [
-  { id: 1, name: 'Alexandre Icaza', username: 'alex_icaza', email: 'alexandre.icaza@espol.edu.ec', rating: 4.8, totalRatings: 15, memberSince: 'Enero 2025', productsCount: 23, soldCount: 15, activeCount: 8 },
-  { id: 2, name: 'Jose Chong', username: 'jose_chong', email: 'jose.chong@espol.edu.ec', rating: 4.9, totalRatings: 12, memberSince: 'Enero 2025', productsCount: 18, soldCount: 10, activeCount: 8 },
-  { id: 3, name: 'Alex Otero', username: 'alex_otero', email: 'alex.otero@espol.edu.ec', rating: 4.7, totalRatings: 20, memberSince: 'Enero 2025', productsCount: 25, soldCount: 18, activeCount: 7 },
-  { id: 4, name: 'María González', username: 'maria_gonzalez', email: 'maria.gonzalez@espol.edu.ec', rating: 4.6, totalRatings: 8, memberSince: 'Enero 2025', productsCount: 12, soldCount: 7, activeCount: 5 },
-];
-
-const mockListings = [
-  { id: 1, title: 'MacBook Pro 13" M1 2020', price: 899, category: 'Electrónicos', location: 'Campus Gustavo Galindo', condition: 'Usado', rating: 4.8, image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400', userId: 1, views: 234, favorites: 12, status: 'active', createdAt: '2024-12-15' },
-  { id: 2, title: 'Cálculo I - James Stewart (9na Ed.)', price: 35, category: 'Libros', location: 'Campus Prosperina', condition: 'Usado', rating: 4.9, image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400', userId: 2, views: 156, favorites: 8, status: 'active', createdAt: '2024-12-14', badge: 'NUEVO' },
-  { id: 3, title: 'Bicicleta de montaña Trek 29"', price: 450, category: 'Deportes', location: 'Campus Gustavo Galindo', condition: 'Usado', rating: 4.7, image: 'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=400', userId: 3, views: 198, favorites: 15, status: 'active', createdAt: '2024-12-13' },
-  { id: 4, title: 'iPhone 12 Pro 128GB - Azul Pacífico', price: 550, category: 'Electrónicos', location: 'Centro Histórico', condition: 'Usado', rating: 5, image: 'https://images.unsplash.com/photo-1603921326210-6edd2d60ca68?w=400', userId: 1, views: 289, favorites: 22, status: 'active', createdAt: '2024-12-12' },
-  { id: 5, title: 'Escritorio de estudio con cajonera', price: 120, category: 'Muebles', location: 'Campus Gustavo Galindo', condition: 'Nuevo', rating: 4.6, image: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400', userId: 2, views: 145, favorites: 9, status: 'active', createdAt: '2024-12-11', badge: 'NUEVO' },
-  { id: 6, title: 'Calculadora Gráfica TI-84 Plus', price: 85, category: 'Electrónicos', location: 'Campus Prosperina', condition: 'Nuevo', rating: 4.8, image: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=400', userId: 3, views: 98, favorites: 6, status: 'active', createdAt: '2024-12-10', badge: 'Sin usar' },
-  { id: 7, title: 'Mochila North Face 40L - Trekking', price: 65, category: 'Deportes', location: 'Campus Gustavo Galindo', condition: 'Usado', rating: 4.9, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400', userId: 1, views: 176, favorites: 11, status: 'active', createdAt: '2024-12-09' },
-  { id: 8, title: 'Lampara de escritorio LED regulable', price: 25, category: 'Otros', location: 'Centro Histórico', condition: 'Nuevo', rating: 5, image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400', userId: 2, views: 87, favorites: 5, status: 'active', createdAt: '2024-12-08', badge: 'NUEVO' },
-];
-
+// ==================== CONFIGURACIÓN ====================
 const categories = [
-  { name: 'Libros', icon: '📚', count: 45 },
-  { name: 'Electrónicos', icon: '💻', count: 78 },
-  { name: 'Muebles', icon: '🪑', count: 23 },
-  { name: 'Deportes', icon: '⚽', count: 34 },
-  { name: 'Ropa', icon: '👕', count: 56 },
-  { name: 'Otros', icon: '📦', count: 89 },
+  { name: 'Libros', icon: '📚' },
+  { name: 'Electrónicos', icon: '💻' },
+  { name: 'Muebles', icon: '🪑' },
+  { name: 'Deportes', icon: '⚽' },
+  { name: 'Ropa', icon: '👕' },
+  { name: 'Otros', icon: '📦' },
 ];
 
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
 
-// ==================== COMPONENTES ====================
+const getImageUrl = (listing) => {
+  if (!listing) return 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400';
+  if (listing.image_url) return listing.image_url;
+  const images = {
+    'Libros': 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
+    'Electrónicos': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400',
+    'Muebles': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',
+    'Deportes': 'https://images.unsplash.com/photo-1461896836934-28f586151a5c?w=400',
+    'Ropa': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400',
+    'Otros': 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400',
+  };
+  return images[listing.category] || images['Otros'];
+};
 
-// Navbar
-const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
+const formatTime = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now - date;
+  
+  if (diff < 60000) return 'Ahora';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d`;
+  return date.toLocaleDateString();
+};
+
+// ==================== TOAST ====================
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+      type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+    } text-white`}>
+      {message}
+    </div>
+  );
+};
+
+// ==================== LOGIN MODAL ====================
+const LoginModal = ({ isOpen, onClose, onLogin, onRegister }) => {
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLoginMode) {
+        await onLogin(email, password);
+      } else {
+        await onRegister({ name, email, password, password_confirmation: password });
+      }
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Error en la autenticación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">{isLoginMode ? 'Iniciar Sesión' : 'Registrarse'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLoginMode && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required={!isLoginMode}
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu.email@espol.edu.ec"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? 'Cargando...' : (isLoginMode ? 'Iniciar Sesión' : 'Registrarse')}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center text-sm">
+          <button
+            onClick={() => setIsLoginMode(!isLoginMode)}
+            className="text-blue-600 hover:underline"
+          >
+            {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+          </button>
+        </div>
+
+        <div className="mt-4 p-3 bg-gray-100 rounded-lg text-sm">
+          <p className="font-medium mb-1">Credenciales de prueba:</p>
+          <p className="text-gray-600">jose.chong@espol.edu.ec / password123</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== NAVBAR ====================
+const Navbar = ({ onSearch, currentUser, onNavigate, onLogout, onLoginClick, onCategorySelect, unreadMessages }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -67,17 +174,10 @@ const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
+    <nav className="bg-white shadow-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <button onClick={() => onNavigate('home')} className="flex items-center space-x-2 hover:opacity-80">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-xl">C</span>
@@ -85,7 +185,6 @@ const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
             <span className="text-xl font-bold text-gray-800 hidden sm:block">CampusMarket</span>
           </button>
 
-          {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-xl mx-4">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -93,66 +192,88 @@ const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Buscar laptops, libros, bicicletas..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center space-x-4">
-            <button onClick={() => onNavigate('create')} className="hidden sm:flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-              <Plus className="w-5 h-5" />
-              <span>Publicar</span>
-            </button>
+            {currentUser ? (
+              <>
+                <button onClick={() => onNavigate('create')} className="hidden sm:flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                  <Plus className="w-5 h-5" />
+                  <span>Publicar</span>
+                </button>
 
-            <button onClick={() => onNavigate('messages')} className="relative p-2 hover:bg-gray-100 rounded-full">
-              <MessageCircle className="w-6 h-6 text-gray-700" />
-              {unreadMessages > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadMessages}
-                </span>
-              )}
-            </button>
+                <button onClick={() => onNavigate('messages')} className="relative p-2 hover:bg-gray-100 rounded-full">
+                  <MessageCircle className="w-6 h-6 text-gray-700" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
 
-            <button onClick={() => onNavigate('favorites')} className="p-2 hover:bg-gray-100 rounded-full">
-              <Heart className="w-6 h-6 text-gray-700" />
-            </button>
+                <button onClick={() => onNavigate('favorites')} className="p-2 hover:bg-gray-100 rounded-full">
+                  <Heart className="w-6 h-6 text-gray-700" />
+                </button>
 
-            <button onClick={() => onNavigate('profile')} className="w-9 h-9 bg-gray-300 rounded-full flex items-center justify-center hover:opacity-80">
-              <User className="w-5 h-5 text-gray-700" />
-            </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">
+                        {currentUser.name?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </button>
 
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Search */}
-        <div className="md:hidden pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Buscar productos..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                      <div className="px-4 py-2 border-b">
+                        <p className="font-medium text-sm">{currentUser.name}</p>
+                        <p className="text-xs text-gray-500">{currentUser.email}</p>
+                      </div>
+                      <button
+                        onClick={() => { onNavigate('profile'); setShowUserMenu(false); }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <User className="w-4 h-4" /> Mi Perfil
+                      </button>
+                      <button
+                        onClick={() => { onLogout(); setShowUserMenu(false); }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" /> Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={onLoginClick}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Iniciar Sesión
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Categories Bar */}
+      {/* Categories */}
       <div className="border-t border-gray-200 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex space-x-6 overflow-x-auto">
           {categories.map((cat) => (
             <button
               key={cat.name}
-              onClick={() => onNavigate('search', { category: cat.name })}
+              onClick={() => onCategorySelect(cat.name)}
               className="flex items-center space-x-2 text-sm text-gray-700 hover:text-blue-600 whitespace-nowrap"
             >
               <span>{cat.icon}</span>
@@ -165,1410 +286,1131 @@ const Navbar = ({ onSearch, currentUser, onNavigate, unreadMessages = 2 }) => {
   );
 };
 
-// Product Card
+// ==================== PRODUCT CARD ====================
 const ProductCard = ({ listing, onFavorite, isFavorited, onNavigate }) => {
-  return (
-    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer">
-      <div className="relative" onClick={() => onNavigate('detail', listing)}>
-        <img src={listing.image} alt={listing.title} className="w-full h-48 object-cover rounded-t-lg" />
-        {listing.badge && (
-          <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">{listing.badge}</span>
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onFavorite(listing.id);
-          }}
-          className="absolute top-2 right-2 bg-white p-2 rounded-full shadow hover:scale-110 transition-transform"
-        >
-          <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-        </button>
-      </div>
+  const [isToggling, setIsToggling] = useState(false);
 
-      <div className="p-4">
-        <h3 className="font-semibold text-gray-800 text-lg mb-2 line-clamp-2">{listing.title}</h3>
-        <p className="text-2xl font-bold text-blue-600 mb-2">${listing.price.toFixed(2)}</p>
-
-        <div className="flex items-center text-sm text-gray-600 mb-2">
-          <MapPin className="w-4 h-4 mr-1" />
-          <span>{listing.location}</span>
-          <span className="ml-auto px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">{listing.condition}</span>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-gray-500">
-          <div className="flex items-center">
-            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
-            <span>{listing.rating}</span>
-          </div>
-          <span>Hace {Math.floor(Math.random() * 400)} días</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Hero Section
-const Hero = ({ onNavigate }) => (
-  <div className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-20">
-    <div className="max-w-7xl mx-auto px-4 text-center">
-      <h1 className="text-4xl md:text-5xl font-bold mb-4">Compra y vende entre estudiantes</h1>
-      <p className="text-xl mb-8">La plataforma de confianza de tu universidad</p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button onClick={() => onNavigate('create')} className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 flex items-center justify-center">
-          Comenzar a vender
-          <ChevronDown className="w-5 h-5 ml-2 rotate-[-90deg]" />
-        </button>
-        <button onClick={() => onNavigate('search')} className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600">
-          Explorar productos
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-// Home Page
-const HomePage = ({ onNavigate, favorites, onFavorite }) => {
-  return (
-    <div>
-      <Hero onNavigate={onNavigate} />
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Publicaciones recientes</h2>
-          <button onClick={() => onNavigate('search')} className="text-blue-600 hover:underline">Ver todos</button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mockListings.slice(0, 8).map((listing) => (
-            <ProductCard
-              key={listing.id}
-              listing={listing}
-              isFavorited={favorites.includes(listing.id)}
-              onFavorite={onFavorite}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <button onClick={() => onNavigate('search')} className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200">
-            Cargar más productos
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Search/Filter Page - ALEX OTERO
-const SearchPage = ({ initialFilters, favorites, onFavorite, onNavigate }) => {
-  const [searchQuery, setSearchQuery] = useState(initialFilters?.query || '');
-  const [selectedCategory, setSelectedCategory] = useState(initialFilters?.category || 'Todas');
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [condition, setCondition] = useState('Todas');
-  const [location, setLocation] = useState('Todas');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filteredListings, setFilteredListings] = useState(mockListings);
-  const [suggestions, setSuggestions] = useState([]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, selectedCategory, priceRange, condition, location]);
-
-  useEffect(() => {
-    if (searchQuery.length > 2) {
-      const matches = mockListings
-        .filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()))
-        .slice(0, 5)
-        .map(l => l.title);
-      setSuggestions(matches);
-    } else {
-      setSuggestions([]);
-    }
-  }, [searchQuery]);
-
-  const applyFilters = () => {
-    let results = [...mockListings];
-
-    if (searchQuery) {
-      results = results.filter(l =>
-        l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (selectedCategory !== 'Todas') {
-      results = results.filter(l => l.category === selectedCategory);
-    }
-
-    if (priceRange.min) {
-      results = results.filter(l => l.price >= parseFloat(priceRange.min));
-    }
-
-    if (priceRange.max) {
-      results = results.filter(l => l.price <= parseFloat(priceRange.max));
-    }
-
-    if (condition !== 'Todas') {
-      results = results.filter(l => l.condition === condition);
-    }
-
-    if (location !== 'Todas') {
-      results = results.filter(l => l.location === location);
-    }
-
-    setFilteredListings(results);
+  const handleFavoriteClick = async (e) => {
+    e.stopPropagation();
+    if (isToggling) return;
+    setIsToggling(true);
+    await onFavorite(listing.id);
+    setIsToggling(false);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Buscar Productos</h1>
-
-      {/* Search Bar with Suggestions */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-4 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="¿Qué estás buscando?"
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-          />
-          {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-2 z-10">
-              {suggestions.map((suggestion, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setSearchQuery(suggestion);
-                    setSuggestions([]);
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-0"
-                >
-                  <Search className="inline w-4 h-4 mr-2 text-gray-400" />
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Filters */}
-        <div className="flex flex-wrap gap-3 mt-4">
-          {categories.map((cat) => (
-            <button
-              key={cat.name}
-              onClick={() => setSelectedCategory(cat.name)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat.name
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-              {cat.icon} {cat.name} ({cat.count})
-            </button>
-          ))}
-        </div>
+    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+      <div className="relative cursor-pointer" onClick={() => onNavigate('detail', listing)}>
+        <img 
+          src={getImageUrl(listing)} 
+          alt={listing.title} 
+          className="w-full h-48 object-cover rounded-t-lg"
+          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400'; }}
+        />
+        {listing.state === 'nuevo' && (
+          <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">NUEVO</span>
+        )}
+        <button
+          onClick={handleFavoriteClick}
+          disabled={isToggling}
+          className="absolute top-2 right-2 p-2 bg-white rounded-full shadow hover:bg-gray-100 disabled:opacity-50"
+        >
+          <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+        </button>
       </div>
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-800 truncate">{listing.title}</h3>
+        <p className="text-blue-600 font-bold text-lg">${parseFloat(listing.price).toFixed(2)}</p>
+        <div className="flex items-center text-sm text-gray-500 mt-2">
+          <MapPin className="w-4 h-4 mr-1" />
+          <span className="truncate">{listing.location}</span>
+        </div>
+        {listing.user && (
+          <p className="text-xs text-gray-400 mt-1">Por: {listing.user.name}</p>
+        )}
+      </div>
+    </div>
+  );
+};
 
-      <div className="flex gap-6">
-        {/* Filters Sidebar */}
-        <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 flex-shrink-0`}>
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-20">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center">
-                <Filter className="w-5 h-5 mr-2" />
-                Filtros
-              </h2>
-              <button onClick={() => {
-                setSelectedCategory('Todas');
-                setPriceRange({ min: '', max: '' });
-                setCondition('Todas');
-                setLocation('Todas');
-              }} className="text-sm text-blue-600 hover:underline">
-                Limpiar
-              </button>
-            </div>
-
-            {/* Price Range */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Rango de Precio</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Mín"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Máx"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Condition */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Estado</label>
-              <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option>Todas</option>
-                <option>Nuevo</option>
-                <option>Usado</option>
-              </select>
-            </div>
-
-            {/* Location */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Ubicación</label>
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option>Todas</option>
-                <option>Campus Gustavo Galindo</option>
-                <option>Campus Prosperina</option>
-                <option>Centro Histórico</option>
-              </select>
-            </div>
-
-            {/* Category Stats */}
-            <div className="border-t pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Estadísticas por Categoría</h3>
-              <div className="space-y-2">
-                {categories.map((cat) => (
-                  <div key={cat.name} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{cat.icon} {cat.name}</span>
-                    <span className="font-semibold text-gray-800">{cat.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+// ==================== HOME PAGE ====================
+const HomePage = ({ listings, onNavigate, favorites, onFavorite, currentUser, loading }) => {
+  return (
+    <main className="flex-1">
+      <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">Compra y vende entre estudiantes</h1>
+          <p className="text-blue-100 mb-6">La plataforma de confianza de tu universidad</p>
+          <div className="flex justify-center gap-4">
+            <button onClick={() => onNavigate('create')} className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-gray-100">
+              Comenzar a vender →
+            </button>
+            <button onClick={() => onNavigate('search')} className="border border-white text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-500">
+              Explorar productos
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Results */}
-        <div className="flex-1">
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between">
-            <p className="text-gray-700">
-              <span className="font-semibold">{filteredListings.length}</span> productos encontrados
-            </p>
-            <div className="flex items-center gap-4">
-              <button onClick={() => setShowFilters(!showFilters)} className="lg:hidden text-blue-600">
-                <Filter className="w-5 h-5" />
-              </button>
-              <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>Más recientes</option>
-                <option>Precio: Menor a Mayor</option>
-                <option>Precio: Mayor a Menor</option>
-                <option>Mejor calificados</option>
-              </select>
-            </div>
+      <section className="max-w-7xl mx-auto px-4 py-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Publicaciones recientes</h2>
+        
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-500">Cargando publicaciones...</p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredListings.map((listing) => (
+        ) : listings.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No hay publicaciones disponibles</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {listings.map((listing) => (
               <ProductCard
                 key={listing.id}
                 listing={listing}
-                isFavorited={favorites.includes(listing.id)}
                 onFavorite={onFavorite}
+                isFavorited={favorites.includes(listing.id)}
                 onNavigate={onNavigate}
               />
             ))}
           </div>
+        )}
+      </section>
+    </main>
+  );
+};
 
-          {filteredListings.length === 0 && (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <Search className="w-16 h-16 mx-auto" />
+// ==================== SEARCH PAGE ====================
+const SearchPage = ({ initialFilters, favorites, onFavorite, onNavigate }) => {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    query: initialFilters?.query || '',
+    category: initialFilters?.category || '',
+    minPrice: '',
+    maxPrice: '',
+    state: ''
+  });
+
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(prev => ({
+        ...prev,
+        query: initialFilters.query || prev.query,
+        category: initialFilters.category || ''
+      }));
+    }
+  }, [initialFilters]);
+
+  useEffect(() => {
+    loadListings();
+  }, [filters.category]);
+
+  const loadListings = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (filters.query) params.query = filters.query;
+      if (filters.category) params.category = filters.category;
+      if (filters.minPrice) params.min_price = filters.minPrice;
+      if (filters.maxPrice) params.max_price = filters.maxPrice;
+      if (filters.state) params.state = filters.state;
+
+      const data = await searchService.search(params);
+      setListings(data.listings || []);
+    } catch (error) {
+      console.error('Error buscando:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    loadListings();
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ query: '', category: '', minPrice: '', maxPrice: '', state: '' });
+  };
+
+  return (
+    <main className="flex-1 max-w-7xl mx-auto px-4 py-6">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <aside className="lg:w-64 bg-white p-4 rounded-lg shadow h-fit">
+          <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Filter className="w-5 h-5" /> Filtros
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+              <input
+                type="text"
+                value={filters.query}
+                onChange={(e) => handleFilterChange('query', e.target.value)}
+                placeholder="Palabra clave..."
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+              <select
+                value={filters.category}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="">Todas</option>
+                {categories.map(cat => (
+                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={filters.minPrice}
+                  onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                  placeholder="Min"
+                  className="w-1/2 px-3 py-2 border rounded-lg text-sm"
+                />
+                <input
+                  type="number"
+                  value={filters.maxPrice}
+                  onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                  placeholder="Max"
+                  className="w-1/2 px-3 py-2 border rounded-lg text-sm"
+                />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">No se encontraron productos</h3>
-              <p className="text-gray-600 mb-4">Intenta ajustar tus filtros o buscar con otros términos</p>
-              <button onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('Todas');
-                setPriceRange({ min: '', max: '' });
-                setCondition('Todas');
-                setLocation('Todas');
-              }} className="text-blue-600 hover:underline">
-                Limpiar filtros
-              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select
+                value={filters.state}
+                onChange={(e) => handleFilterChange('state', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="">Todos</option>
+                <option value="nuevo">Nuevo</option>
+                <option value="usado">Usado</option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleSearch}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            >
+              Buscar
+            </button>
+
+            <button
+              onClick={clearFilters}
+              className="w-full text-gray-600 py-2 hover:text-gray-800"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </aside>
+
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-gray-600">{listings.length} resultados encontrados</p>
+            {filters.category && (
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+                {filters.category}
+              </span>
+            )}
+          </div>
+          
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          ) : listings.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg">
+              <p className="text-gray-500">No se encontraron productos</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listings.map((listing) => (
+                <ProductCard
+                  key={listing.id}
+                  listing={listing}
+                  onFavorite={onFavorite}
+                  isFavorited={favorites.includes(listing.id)}
+                  onNavigate={onNavigate}
+                />
+              ))}
             </div>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
-// Favorites Page - ALEX OTERO
-const FavoritesPage = ({ favorites, onFavorite, onNavigate }) => {
-  const favoriteListings = mockListings.filter(l => favorites.includes(l.id));
+// ==================== FAVORITES PAGE ====================
+const FavoritesPage = ({ onFavorite, onNavigate, currentUser, refreshKey }) => {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadFavorites();
+    } else {
+      setLoading(false);
+    }
+  }, [currentUser, refreshKey]);
+
+  const loadFavorites = async () => {
+    setLoading(true);
+    try {
+      const data = await favoritesService.getAll();
+      const favListings = data.map(fav => fav.listing).filter(Boolean);
+      const favIds = data.map(fav => fav.listing_id);
+      setListings(favListings);
+      setFavoriteIds(favIds);
+    } catch (error) {
+      console.error('Error cargando favoritos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (listingId) => {
+    await onFavorite(listingId);
+    setListings(listings.filter(l => l.id !== listingId));
+    setFavoriteIds(favoriteIds.filter(id => id !== listingId));
+  };
+
+  if (!currentUser) {
+    return (
+      <main className="flex-1 max-w-7xl mx-auto px-4 py-12 text-center">
+        <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Mis Favoritos</h2>
+        <p className="text-gray-500">Inicia sesión para ver tus favoritos</p>
+      </main>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">Mis Favoritos</h1>
-      <p className="text-gray-600 mb-6">Productos que has guardado para ver más tarde</p>
-
-      {favoriteListings.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {favoriteListings.map((listing) => (
+    <main className="flex-1 max-w-7xl mx-auto px-4 py-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Mis Favoritos</h2>
+      
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg">
+          <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">No tienes favoritos aún</p>
+          <button onClick={() => onNavigate('search')} className="mt-4 text-blue-600 hover:underline">
+            Explorar productos
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {listings.map((listing) => (
             <ProductCard
               key={listing.id}
               listing={listing}
+              onFavorite={handleRemoveFavorite}
               isFavorited={true}
-              onFavorite={onFavorite}
               onNavigate={onNavigate}
             />
           ))}
         </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No tienes favoritos aún</h3>
-          <p className="text-gray-600 mb-4">Explora productos y guarda los que te interesen</p>
-          <button onClick={() => onNavigate('search')} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
-            Explorar productos
-          </button>
-        </div>
       )}
-    </div>
+    </main>
   );
 };
 
-// User Profile Page - ALEX OTERO
-const ProfilePage = ({ userId, onNavigate, currentUserId }) => {
-  const user = mockUsers.find(u => u.id === userId) || mockUsers[0];
-  const userListings = mockListings.filter(l => l.userId === userId);
-  const [activeTab, setActiveTab] = useState('publicaciones');
-  const isOwnProfile = userId === currentUserId;
-  const [editingListing, setEditingListing] = useState(null);
-  const [listingStatuses, setListingStatuses] = useState({});
-  const [editForm, setEditForm] = useState({
-    title: '',
-    price: '',
-    condition: '',
-    description: ''
-  });
+// ==================== PROFILE PAGE ====================
+const ProfilePage = ({ currentUser, onNavigate, showToast }) => {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('todas');
 
-  const handleEditClick = (listing) => {
-    setEditingListing(listing);
-    setEditForm({
-      title: listing.title,
-      price: listing.price,
-      condition: listing.condition,
-      description: 'Descripción del producto...'
-    });
+  useEffect(() => {
+    if (currentUser) {
+      loadMyListings();
+    }
+  }, [currentUser]);
+
+  const loadMyListings = async () => {
+    try {
+      const data = await listingsService.getMyListings();
+      setListings(data.listings || data || []);
+    } catch (error) {
+      console.error('Error cargando publicaciones:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSaveEdit = () => {
-    alert(`Publicación "${editForm.title}" actualizada correctamente - Alerta para después conectar con el backend!`);
-    setEditingListing(null);
+  const handleDelete = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar esta publicación?')) return;
+    
+    try {
+      await listingsService.delete(id);
+      setListings(listings.filter(l => l.id !== id));
+      showToast('Publicación eliminada', 'success');
+    } catch (error) {
+      showToast('Error al eliminar', 'error');
+    }
   };
 
-  const toggleStatus = (listingId) => {
-    setListingStatuses(prev => ({
-      ...prev,
-      [listingId]: prev[listingId] === 'paused' ? 'active' : 'paused'
-    }));
-  };
+  if (!currentUser) {
+    return (
+      <main className="flex-1 max-w-7xl mx-auto px-4 py-12 text-center">
+        <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Mi Perfil</h2>
+        <p className="text-gray-500">Inicia sesión para ver tu perfil</p>
+      </main>
+    );
+  }
 
-  const getListingStatus = (listingId) => {
-    return listingStatuses[listingId] || 'active';
-  };
+  const activeListings = listings.filter(l => l.status === 'active' || !l.status);
+  const soldListings = listings.filter(l => l.status === 'sold');
+
+  const filteredListings = filter === 'todas' ? listings : 
+    filter === 'activas' ? activeListings : soldListings;
 
   return (
-    <div className="bg-gradient-to-b from-blue-600 to-cyan-500 pb-8">
-      <div className="max-w-5xl mx-auto px-4 pt-8">
-        {/* Profile Header */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          {isOwnProfile && (
-            <div className="text-right mb-4">
-              <button className="text-blue-600 hover:underline flex items-center ml-auto">
-                <Edit className="w-4 h-4 mr-1" />
-                Editar perfil
-              </button>
-            </div>
-          )}
-
-          <div className="flex items-start gap-6 mb-6">
-            <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center text-4xl text-gray-600">
-              👤
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-800 mb-1">{user.name}</h1>
-              <p className="text-gray-600 mb-2">@{user.username}</p>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`w-5 h-5 ${i < Math.floor(user.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                  ))}
-                  <span className="ml-2 text-gray-700 font-semibold">{user.rating}</span>
-                  <span className="ml-1 text-gray-500">({user.totalRatings} calificaciones)</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600">Miembro desde {user.memberSince}</p>
-            </div>
+    <main className="flex-1 max-w-4xl mx-auto px-4 py-6">
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-2xl">
+              {currentUser.name?.charAt(0).toUpperCase()}
+            </span>
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 border-t pt-6">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">{user.productsCount}</p>
-              <p className="text-sm text-gray-600">Productos</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">{user.soldCount}</p>
-              <p className="text-sm text-gray-600">Vendidos</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-yellow-600">{user.activeCount}</p>
-              <p className="text-sm text-gray-600">Activos</p>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">{currentUser.name}</h2>
+            <p className="text-gray-500">{currentUser.email}</p>
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span className="text-sm text-gray-600">4.8 (15 calificaciones)</span>
             </div>
           </div>
         </div>
 
-        {/* Modal de Edición */}
-        {editingListing && (
-          <div className="fixed inset-0 backdrop-blur-sm 1 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Editar Publicación</h2>
-                  <button
-                    onClick={() => setEditingListing(null)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Título *</label>
-                    <input
-                      type="text"
-                      value={editForm.title}
-                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Precio (USD) *</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                      <input
-                        type="number"
-                        value={editForm.price}
-                        onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Estado *</label>
-                    <select
-                      value={editForm.condition}
-                      onChange={(e) => setEditForm({ ...editForm, condition: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Nuevo">Nuevo</option>
-                      <option value="Usado">Usado</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Descripción</label>
-                    <textarea
-                      value={editForm.description}
-                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setEditingListing(null)}
-                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                  >
-                    Guardar cambios
-                  </button>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-3 gap-4 mt-6 text-center">
+          <div>
+            <p className="text-2xl font-bold text-blue-600">{listings.length}</p>
+            <p className="text-sm text-gray-500">Productos</p>
           </div>
-        )}
-
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-lg">
-          <div className="border-b">
-            <div className="flex">
-              <button
-                onClick={() => setActiveTab('publicaciones')}
-                className={`flex-1 px-6 py-4 font-semibold ${activeTab === 'publicaciones' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-              >
-                Mis Publicaciones
-              </button>
-              <button
-                onClick={() => setActiveTab('favoritos')}
-                className={`flex-1 px-6 py-4 font-semibold ${activeTab === 'favoritos' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-              >
-                Favoritos
-                <span className="ml-2 text-sm bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">5</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('calificaciones')}
-                className={`flex-1 px-6 py-4 font-semibold ${activeTab === 'calificaciones' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-              >
-                Calificaciones
-              </button>
-            </div>
+          <div>
+            <p className="text-2xl font-bold text-green-600">{soldListings.length}</p>
+            <p className="text-sm text-gray-500">Vendidos</p>
           </div>
-
-          <div className="p-6">
-            {activeTab === 'publicaciones' && (
-              <div>
-                {isOwnProfile && (
-                  <div className="mb-6">
-                    <button onClick={() => onNavigate('create')} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center">
-                      <Plus className="w-5 h-5 mr-2" />
-                      Publicar nuevo producto
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex gap-3 mb-6">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Todas (2)</button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Activas (2)</button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Pausadas (0)</button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Vendidas (0)</button>
-                </div>
-
-
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {userListings.map((listing) => {
-                    const status = getListingStatus(listing.id);
-                    const isPaused = status === 'paused';
-
-                    return (
-                      <div key={listing.id} className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow ${isPaused ? 'opacity-60' : ''}`}>
-                        <div className="relative">
-                          <img src={listing.image} alt={listing.title} className="w-full h-48 object-cover" />
-                          <span className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`}>
-                            {isPaused ? 'Pausado' : 'Activo'}
-                          </span>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-semibold text-gray-800 mb-2">{listing.title}</h3>
-                          <p className="text-2xl font-bold text-blue-600 mb-3">${listing.price.toFixed(2)}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                            <span className="flex items-center">
-                              <Eye className="w-4 h-4 mr-1" />
-                              {listing.views}
-                            </span>
-                            <span className="flex items-center">
-                              <Heart className="w-4 h-4 mr-1" />
-                              {listing.favorites}
-                            </span>
-                            <span className="flex items-center">
-                              <MessageCircle className="w-4 h-4 mr-1" />
-                              {Math.floor(listing.favorites / 2)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-4">Publicado hace {Math.floor(Math.random() * 400)} días</p>
-
-                          {isOwnProfile && (
-                            <div className="flex gap-2 pt-3 border-t border-gray-200">
-                              <button
-                                onClick={() => handleEditClick(listing)}
-                                className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center justify-center"
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  toggleStatus(listing.id);
-                                  alert(isPaused ? 'Publicación activada - Alerta para después conectar con el backend!' : 'Publicación pausada - Alerta para después conectar con el backend!');
-                                }}
-                                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${isPaused
-                                  ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                                  : 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
-                                  }`}
-                              >
-                                {isPaused ? 'Activar' : 'Pausar'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (window.confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
-                                    alert('Publicación eliminada - Alerta para después conectar con el backend!');
-                                  }
-                                }}
-                                className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          <div>
+            <p className="text-2xl font-bold text-orange-600">{activeListings.length}</p>
+            <p className="text-sm text-gray-500">Activos</p>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
 
-// Product Detail Page
-const ProductDetailPage = ({ listing, onNavigate, onFavorite, isFavorited }) => {
-  const [currentImage, setCurrentImage] = useState(0);
-  const images = [listing.image, listing.image, listing.image];
-  const seller = mockUsers.find(u => u.id === listing.userId);
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b px-4 py-3">
+          <h3 className="font-bold text-gray-800">Mis Publicaciones</h3>
+        </div>
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <button onClick={() => onNavigate('home')} className="text-blue-600 hover:underline mb-6 flex items-center">
-        ← Volver
-      </button>
+        <div className="p-4">
+          <button
+            onClick={() => onNavigate('create')}
+            className="w-full sm:w-auto mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" /> Publicar nuevo producto
+          </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Images */}
-        <div>
-          <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4">
-            <img src={images[currentImage]} alt={listing.title} className="w-full h-96 object-cover" />
-            {listing.badge && (
-              <span className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded">{listing.badge}</span>
-            )}
-            <button
-              onClick={() => onFavorite(listing.id)}
-              className="absolute top-4 right-4 bg-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
-            >
-              <Heart className={`w-6 h-6 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            {images.map((img, idx) => (
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {['todas', 'activas', 'vendidas'].map(f => (
               <button
-                key={idx}
-                onClick={() => setCurrentImage(idx)}
-                className={`w-24 h-24 rounded-lg overflow-hidden border-2 ${currentImage === idx ? 'border-blue-600' : 'border-gray-200'}`}
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  filter === f ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                {f.charAt(0).toUpperCase() + f.slice(1)} ({
+                  f === 'todas' ? listings.length :
+                  f === 'activas' ? activeListings.length : soldListings.length
+                })
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Details */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">{listing.title}</h1>
-          <p className="text-4xl font-bold text-blue-600 mb-6">${listing.price.toFixed(2)}</p>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Estado:</span>
-              <span className="font-semibold text-gray-800">{listing.condition}</span>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Categoría:</span>
-              <span className="font-semibold text-gray-800">{listing.category}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Ubicación:</span>
-              <span className="font-semibold text-gray-800 flex items-center">
-                <MapPin className="w-4 h-4 mr-1" />
-                {listing.location}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Publicado:</span>
-              <span className="font-semibold text-gray-800">Hace 397 días</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-gray-800 mb-3">Descripción</h3>
-            <p className="text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Producto en excelentes condiciones,
-              muy bien cuidado. Incluye cargador original y caja. Sin rayones ni golpes.
-              Perfecto para estudiantes que necesitan un equipo confiable para sus estudios.
-            </p>
-          </div>
-
-          {/* Seller Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-gray-800 mb-3">Vendedor</h3>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-gray-300 rounded-full" />
-              <div className="flex-1">
-                <p className="font-semibold text-gray-800">{seller.name}</p>
-                <div className="flex items-center text-sm">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
-                  <span>{seller.rating}</span>
-                  <span className="text-gray-500 ml-1">({seller.totalRatings} calificaciones)</span>
-                </div>
-              </div>
-              <button onClick={() => onNavigate('profile', seller)} className="text-blue-600 hover:underline text-sm">
-                Ver perfil
-              </button>
-            </div>
-          </div>
-
-          <button onClick={() => onNavigate('messages')} className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center mb-3">
-            <MessageCircle className="w-5 h-5 mr-2" />
-            Contactar vendedor
-          </button>
-          <button onClick={() => onFavorite(listing.id)} className="w-full border-2 border-gray-300 text-gray-700 py-4 rounded-lg font-semibold hover:bg-gray-50 flex items-center justify-center">
-            <Heart className={`w-5 h-5 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-            {isFavorited ? 'Guardado en favoritos' : 'Guardar en favoritos'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const MessagesPage = ({ onNavigate = () => {} }) => {
-  const [selectedChat, setSelectedChat] = useState(1);
-  const [message, setMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const messagesEndRef = useRef(null);
-  const [messages, setMessages] = useState({
-    1: [
-      { id: 1, text: 'Hola! Me interesa la MacBook', sender: 'them', time: '10:00', read: true, date: '2024-12-12', userId: 2 },
-      { id: 2, text: 'Hola! Claro, está disponible. ¿Tienes alguna pregunta?', sender: 'me', time: '10:05', read: true, date: '2024-12-12', userId: 1 },
-      { id: 3, text: '¿Incluye la caja original?', sender: 'them', time: '10:10', read: true, date: '2024-12-12', userId: 2 },
-      { id: 4, text: 'No incluye la caja, pero si el cargador original y una funda', sender: 'me', time: '10:15', read: true, date: '2024-12-12', userId: 1 },
-      { id: 5, text: 'Hola! ¿Está disponible la laptop?', sender: 'them', time: '14:55', read: false, date: '2024-12-12', userId: 2 },
-    ],
-    2: [
-      { id: 1, text: 'Hola, me interesa el libro', sender: 'them', time: '08:30', read: true, date: '2024-12-11', userId: 3 },
-      { id: 2, text: 'Perfecto, nos vemos mañana entonces', sender: 'them', time: '09:00', read: true, date: '2024-12-11', userId: 3 },
-    ],
-    3: [
-      { id: 1, text: 'Gracias por la compra!', sender: 'them', time: '15:20', read: true, date: '2024-12-10', userId: 4 },
-    ]
-  });
-
-  const chats = [
-    {
-      id: 1,
-      userId: 2,
-      user: mockUsers[1].name,
-      lastMessage: 'Hola! ¿Está disponible la laptop?',
-      time: 'Hace 5 min',
-      unread: 2,
-      productId: 1,
-      product: mockListings[0].title,
-      productImage: mockListings[0].image,
-      online: true
-    },
-    {
-      id: 2,
-      userId: 3,
-      user: mockUsers[2].name,
-      lastMessage: 'Perfecto, nos vemos mañana entonces',
-      time: 'Hace 2 horas',
-      unread: 0,
-      productId: 2,
-      product: mockListings[1].title,
-      productImage: mockListings[1].image,
-      online: false
-    },
-    {
-      id: 3,
-      userId: 4,
-      user: mockUsers[3].name,
-      lastMessage: 'Gracias por la compra!',
-      time: 'Ayer',
-      unread: 0,
-      productId: null,
-      product: null,
-      productImage: null,
-      online: false
-    },
-  ];
-
-  const currentChat = chats.find(c => c.id === selectedChat);
-  const currentMessages = messages[selectedChat] || [];
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages]);
-
-  const handleSendMessage = () => {
-    if (!message.trim() || !selectedChat) return;
-
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
-    const newMessage = {
-      id: Date.now(),
-      text: message.trim(),
-      sender: 'me',
-      time: timeString,
-      read: false,
-      date: now.toISOString().split('T')[0]
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [selectedChat]: [...(prev[selectedChat] || []), newMessage]
-    }));
-
-    setMessage('');
-  };
-
-  const filteredChats = chats.filter(chat =>
-    chat.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Mensajes</h1>
-
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden" style={{ height: '600px' }}>
-          <div className="flex h-full">
-            {/* Chat List Sidebar */}
-            <div className={`w-full sm:w-96 border-r border-gray-200 flex flex-col ${selectedChat ? 'hidden sm:flex' : 'flex'}`}>
-              {/* Search Header */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Buscar conversación..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          ) : filteredListings.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No tienes publicaciones</p>
+          ) : (
+            <div className="space-y-4">
+              {filteredListings.map(listing => (
+                <div key={listing.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <img
+                    src={getImageUrl(listing)}
+                    alt={listing.title}
+                    className="w-20 h-20 object-cover rounded-lg"
                   />
-                </div>
-              </div>
-
-              {/* Conversations List */}
-              <div className="flex-1 overflow-y-auto">
-                {filteredChats.map((chat) => (
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-800">{listing.title}</h4>
+                    <p className="text-blue-600 font-bold">${parseFloat(listing.price).toFixed(2)}</p>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      listing.status === 'sold' ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {listing.status === 'sold' ? 'Vendido' : 'Activo'}
+                    </span>
+                  </div>
                   <button
-                    key={chat.id}
-                    onClick={() => setSelectedChat(chat.id)}
-                    className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 text-left transition-colors ${
-                      selectedChat === chat.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
-                    }`}
+                    onClick={() => handleDelete(listing.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded"
+                    title="Eliminar"
                   >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar with Online Status */}
-                      <div className="relative shrink-0">
-                        <div className="w-12 h-12 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {chat.user.charAt(0)}
-                        </div>
-                        {chat.online && (
-                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
-                        )}
-                      </div>
-
-                      {/* Chat Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold text-gray-900 truncate">{chat.user}</p>
-                          <span className="text-xs text-gray-500 shrink-0 ml-2">{chat.time}</span>
-                        </div>
-
-                        <p className="text-sm text-gray-600 truncate mb-2">{chat.lastMessage}</p>
-
-                        {/* Product Preview */}
-                        {chat.product && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <img
-                              src={chat.productImage}
-                              alt=""
-                              className="w-8 h-8 rounded object-cover shrink-0"
-                            />
-                            <p className="text-xs text-gray-500 truncate">{chat.product}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Unread Badge */}
-                      {chat.unread > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0 font-medium">
-                          {chat.unread}
-                        </span>
-                      )}
-                    </div>
+                    <Trash2 className="w-5 h-5" />
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Chat Window */}
-            <div className={`flex-1 flex flex-col ${!selectedChat ? 'hidden sm:flex' : 'flex'}`}>
-              {currentChat ? (
-                <>
-                  {/* Chat Header */}
-                  <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {/* Back Button - Mobile */}
-                      <button
-                        onClick={() => setSelectedChat(null)}
-                        className="sm:hidden p-2 hover:bg-gray-100 rounded-lg"
-                      >
-                        <ArrowLeft className="w-5 h-5 text-gray-600" />
-                      </button>
-
-                      {/* User Info */}
-                      <div className="w-10 h-10 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {currentChat.user.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{currentChat.user}</p>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          {currentChat.online ? (
-                            <>
-                              <span className="w-2 h-2 bg-green-500 rounded-full" />
-                              <span className="text-green-600 font-medium">En línea</span>
-                            </>
-                          ) : (
-                            'Última vez hace 2h'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Product Info & Actions */}
-                    <div className="flex items-center gap-3">
-                      {currentChat.product && (
-                        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                          <img
-                            src={currentChat.productImage}
-                            alt=""
-                            className="w-10 h-10 rounded object-cover"
-                          />
-                          <div className="max-w-xs">
-                            <span className="text-sm text-gray-700 font-medium block truncate">{currentChat.product}</span>
-                            <button
-                              onClick={() => onNavigate('detail', mockListings.find(l => l.id === currentChat.productId))}
-                              className="text-blue-600 hover:text-blue-700 text-xs font-medium"
-                            >
-                              Ver producto →
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreVertical className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                    <div className="space-y-4">
-                      {/* Date Separator */}
-                      <div className="flex items-center justify-center my-4">
-                        <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
-                          12 de diciembre de 2024
-                        </span>
-                      </div>
-
-                      {/* Messages */}
-                      {currentMessages.map((msg) => (
-                        <div key={msg.id} className={`flex gap-2 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                          {msg.sender === 'them' && (
-                            <div className="w-8 h-8 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                              {currentChat.user.charAt(0)}
-                            </div>
-                          )}
-
-                          <div className={`max-w-[70%] ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-                            <div className={`px-4 py-2 rounded-2xl ${
-                              msg.sender === 'me'
-                                ? 'bg-blue-600 text-white rounded-tr-sm'
-                                : 'bg-white text-gray-900 rounded-tl-sm shadow-sm'
-                            }`}>
-                              <p className="text-sm leading-relaxed">{msg.text}</p>
-                            </div>
-
-                            <div className={`flex items-center gap-1 mt-1 text-xs text-gray-500 ${
-                              msg.sender === 'me' ? 'justify-end' : 'justify-start'
-                            }`}>
-                              <span>{msg.time}</span>
-                              {msg.sender === 'me' && (
-                                msg.read ? (
-                                  <CheckCheck className="w-3 h-3 text-blue-500" />
-                                ) : (
-                                  <Check className="w-3 h-3" />
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </div>
-
-                  {/* Message Input */}
-                  <div className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Paperclip className="w-5 h-5 text-gray-600" />
-                      </button>
-
-                      <input
-                        type="text"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                        placeholder="Escribir mensaje..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Smile className="w-5 h-5 text-gray-600" />
-                      </button>
-
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={!message.trim()}
-                        className="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Send className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* Empty State */
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Search className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Selecciona una conversación</h3>
-                    <p className="text-gray-500">Elige una conversación para ver los mensajes</p>
-                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
-// Create Listing Page
-const CreateListingPage = ({ onNavigate }) => {
-  const [formData, setFormData] = useState({
+// ==================== CREATE LISTING PAGE ====================
+const CreateListingPage = ({ onNavigate, currentUser, showToast }) => {
+  const [form, setForm] = useState({
     title: '',
-    category: '',
-    price: '',
-    condition: 'Nuevo',
     description: '',
-    location: '',
+    price: '',
+    category: 'Otros',
+    state: 'usado',
+    location: 'FIEC'
   });
+  const [loading, setLoading] = useState(false);
+
+  const locations = ['FIEC', 'FIMCP', 'FCNM', 'EDCOM', 'Coliseo', 'Biblioteca'];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!currentUser) {
+      showToast('Debes iniciar sesión', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await listingsService.create(form);
+      showToast('¡Publicación creada!', 'success');
+      onNavigate('profile');
+    } catch (error) {
+      showToast(error.message || 'Error al crear publicación', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!currentUser) {
+    return (
+      <main className="flex-1 max-w-2xl mx-auto px-4 py-12 text-center">
+        <Plus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Publicar Producto</h2>
+        <p className="text-gray-500">Inicia sesión para publicar</p>
+      </main>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <button onClick={() => onNavigate('home')} className="text-blue-600 hover:underline mb-6 flex items-center">
+    <main className="flex-1 max-w-2xl mx-auto px-4 py-6">
+      <button onClick={() => onNavigate('home')} className="text-gray-600 hover:text-gray-800 mb-4 flex items-center gap-1">
+        ← Volver
+      </button>
+      
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Publicar nuevo producto</h2>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Título del producto *</label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({...form, title: e.target.value})}
+            placeholder="Ej: MacBook Pro 13 pulgadas"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({...form, description: e.target.value})}
+            placeholder="Describe tu producto en detalle..."
+            rows={4}
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Precio (USD) *</label>
+            <input
+              type="number"
+              value={form.price}
+              onChange={(e) => setForm({...form, price: e.target.value})}
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm({...form, category: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {categories.map(cat => (
+                <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+            <select
+              value={form.state}
+              onChange={(e) => setForm({...form, state: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="nuevo">Nuevo</option>
+              <option value="usado">Usado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación *</label>
+            <select
+              value={form.location}
+              onChange={(e) => setForm({...form, location: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {locations.map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+        >
+          {loading ? 'Publicando...' : 'Publicar producto'}
+        </button>
+      </form>
+    </main>
+  );
+};
+
+// ==================== PRODUCT DETAIL PAGE ====================
+const ProductDetailPage = ({ listing, onNavigate, onFavorite, isFavorited, currentUser, showToast, onStartConversation }) => {
+  if (!listing) return null;
+
+  const handleContact = async () => {
+    if (!currentUser) {
+      showToast('Inicia sesión para contactar al vendedor', 'error');
+      return;
+    }
+    
+    if (listing.user_id === currentUser.id || listing.user?.id === currentUser.id) {
+      showToast('No puedes contactarte contigo mismo', 'error');
+      return;
+    }
+
+    try {
+      const result = await conversationsService.create(listing.id);
+      onStartConversation(result.conversation);
+      showToast('Conversación iniciada', 'success');
+    } catch (error) {
+      showToast(error.message || 'Error al iniciar conversación', 'error');
+    }
+  };
+
+  return (
+    <main className="flex-1 max-w-4xl mx-auto px-4 py-6">
+      <button onClick={() => onNavigate('home')} className="text-gray-600 hover:text-gray-800 mb-4 flex items-center gap-1">
         ← Volver
       </button>
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Publicar nuevo producto</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Info */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Información básica</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Título del producto *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder='Ej: MacBook Pro 13" M1 2020'
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">0/80 caracteres</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Categoría *</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {categories.map((cat) => (
-                    <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Precio (USD) *</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Estado del producto *</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="condition"
-                      value="Nuevo"
-                      checked={formData.condition === 'Nuevo'}
-                      onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-                      className="mr-2"
-                    />
-                    <span>Nuevo</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="condition"
-                      value="Usado"
-                      checked={formData.condition === 'Usado'}
-                      onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-                      className="mr-2"
-                    />
-                    <span>Usado</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Descripción detallada</h2>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe tu producto: condiciones, tiempo de uso, accesorios incluidos..."
-              rows={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="md:flex">
+          <div className="md:w-1/2">
+            <img
+              src={getImageUrl(listing)}
+              alt={listing.title}
+              className="w-full h-80 object-cover"
             />
-            <p className="text-xs text-gray-500 mt-1">0/1000 caracteres</p>
           </div>
+          <div className="md:w-1/2 p-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">{listing.title}</h1>
+            <p className="text-3xl font-bold text-blue-600 mb-4">${parseFloat(listing.price).toFixed(2)}</p>
+            
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`px-2 py-1 rounded text-sm ${
+                listing.state === 'nuevo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {listing.state === 'nuevo' ? 'Nuevo' : 'Usado'}
+              </span>
+              <span className="text-sm text-gray-500">{listing.category}</span>
+            </div>
 
-          {/* Photos */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Fotografías</h2>
-            <p className="text-sm text-gray-600 mb-4">Agrega hasta 5 fotos (JPG, PNG - máx 5MB cada una)</p>
+            <div className="flex items-center text-gray-500 mb-4">
+              <MapPin className="w-4 h-4 mr-1" />
+              <span>{listing.location}</span>
+            </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer">
-              <div className="text-gray-400 mb-2">
-                <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-lg flex items-center justify-center">
-                  ⬆️
-                </div>
-              </div>
-              <p className="text-gray-700 font-medium mb-1">Arrastra imágenes aquí</p>
-              <p className="text-sm text-gray-500">o haz clic para seleccionar</p>
-              <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Seleccionar archivos
+            <p className="text-gray-600 mb-6">{listing.description}</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleContact}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" /> Contactar
+              </button>
+              <button
+                onClick={() => onFavorite(listing.id)}
+                className={`p-3 rounded-lg border ${
+                  isFavorited ? 'bg-red-50 border-red-200 text-red-500' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} />
               </button>
             </div>
-          </div>
 
-          {/* Location */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Ubicación de entrega</h2>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Campus / Lugar de encuentro *</label>
-              <select
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecciona un lugar</option>
-                <option>Campus Gustavo Galindo</option>
-                <option>Campus Prosperina</option>
-                <option>Centro Histórico</option>
-              </select>
-              <label className="flex items-center mt-3">
-                <input type="checkbox" className="mr-2" />
-                <span className="text-sm text-gray-700">Acepto entregas en otro campus (coordinado)</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <label className="flex items-center">
-              <input type="checkbox" className="mr-2" />
-              <span className="text-sm">He leído y acepto los <a href="#" className="text-blue-600 hover:underline">términos y condiciones</a> *</span>
-            </label>
-          </div>
-
-          <div className="flex gap-4">
-            <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-              Vista previa
-            </button>
-            <button className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-              Guardar como borrador
-            </button>
-            <button className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center">
-              ✓ Publicar producto
-            </button>
-          </div>
-        </div>
-
-        {/* Tips Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h3 className="font-bold text-yellow-800 mb-3 flex items-center">
-              💡 Consejos para vender rápido
-            </h3>
-            <ul className="space-y-2 text-sm text-yellow-800">
-              <li className="flex items-start">
-                <span className="mr-2">✓</span>
-                <span>Usa fotos con buena iluminación</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">✓</span>
-                <span>Describe todos los detalles importantes</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">✓</span>
-                <span>Establece un precio competitivo</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">✓</span>
-                <span>Responde rápido a los mensajes</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">✓</span>
-                <span>Sé honesto sobre el estado del producto</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-bold text-blue-800 mb-2">💡 ¿Sabías que...?</h3>
-            <p className="text-sm text-blue-800">
-              Los productos con buena descripción y fotos se venden 3 veces más rápido
-            </p>
+            {listing.user && (
+              <div className="mt-6 pt-6 border-t">
+                <p className="text-sm text-gray-500 mb-2">Vendedor</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-medium">
+                      {listing.user.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">{listing.user.name}</p>
+                    <p className="text-sm text-gray-500">{listing.user.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
-// Footer
-const Footer = () => (
-  <footer className="bg-gray-100 border-t mt-auto">
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3">Acerca de</h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li><a href="#" className="hover:text-blue-600">¿Quiénes somos?</a></li>
-            <li><a href="#" className="hover:text-blue-600">Cómo funciona</a></li>
-            <li><a href="#" className="hover:text-blue-600">Blog</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3">Soporte</h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li><a href="#" className="hover:text-blue-600">Centro de ayuda</a></li>
-            <li><a href="#" className="hover:text-blue-600">Términos y condiciones</a></li>
-            <li><a href="#" className="hover:text-blue-600">Privacidad</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3">Comunidad</h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li><a href="#" className="hover:text-blue-600">Consejos de venta</a></li>
-            <li><a href="#" className="hover:text-blue-600">Seguridad</a></li>
-            <li><a href="#" className="hover:text-blue-600">Contacto</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3">Síguenos</h3>
-          <div className="flex gap-4 text-gray-600">
-            <a href="#" className="hover:text-blue-600 text-2xl">f</a>
-            <a href="#" className="hover:text-blue-600 text-2xl">📷</a>
+// ==================== MESSAGES PAGE ====================
+const MessagesPage = ({ currentUser, showToast, onUpdateUnread }) => {
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
+  const wsRef = useRef(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadConversations();
+      connectWebSocket();
+    }
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const connectWebSocket = () => {
+    if (!currentUser) return;
+    
+    try {
+      wsRef.current = new WebSocket(`${WS_URL}?user_id=${currentUser.id}`);
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket conectado');
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'message' && data.conversation_id) {
+          // Si es de la conversación actual, agregar mensaje
+          if (selectedConversation && data.conversation_id === selectedConversation.id) {
+            setMessages(prev => [...prev, {
+              id: data.message_id,
+              content: data.content,
+              created_at: data.created_at,
+              is_mine: false,
+              user: data.sender
+            }]);
+          }
+          // Actualizar lista de conversaciones
+          loadConversations();
+        }
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+      
+      wsRef.current.onclose = () => {
+        console.log('WebSocket desconectado');
+        // Reconectar después de 3 segundos
+        setTimeout(connectWebSocket, 3000);
+      };
+    } catch (error) {
+      console.error('Error conectando WebSocket:', error);
+    }
+  };
+
+  const loadConversations = async () => {
+    try {
+      const data = await conversationsService.getAll();
+      setConversations(data);
+      
+      // Calcular total de no leídos
+      const totalUnread = data.reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
+      onUpdateUnread(totalUnread);
+    } catch (error) {
+      console.error('Error cargando conversaciones:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadConversation = async (conv) => {
+    setSelectedConversation(conv);
+    try {
+      const data = await conversationsService.getById(conv.id);
+      setMessages(data.messages || []);
+      // Marcar como leídos
+      await conversationsService.markAsRead(conv.id);
+      loadConversations(); // Actualizar contadores
+    } catch (error) {
+      console.error('Error cargando conversación:', error);
+      showToast('Error al cargar mensajes', 'error');
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedConversation || sending) return;
+
+    setSending(true);
+    try {
+      const message = await conversationsService.sendMessage(selectedConversation.id, newMessage.trim());
+      setMessages(prev => [...prev, message]);
+      setNewMessage('');
+      loadConversations(); // Actualizar última actividad
+    } catch (error) {
+      showToast('Error al enviar mensaje', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  if (!currentUser) {
+    return (
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-12 text-center">
+        <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Mensajes</h2>
+        <p className="text-gray-500">Inicia sesión para ver tus mensajes</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex-1 max-w-5xl mx-auto px-4 py-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Mensajes</h2>
+      
+      <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: '70vh' }}>
+        <div className="flex h-full">
+          {/* Lista de conversaciones */}
+          <div className={`w-full md:w-1/3 border-r ${selectedConversation ? 'hidden md:block' : ''}`}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold text-gray-800">Conversaciones</h3>
+            </div>
+            
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No tienes conversaciones aún</p>
+                <p className="text-gray-400 text-xs mt-1">Cuando contactes a un vendedor, aparecerá aquí</p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto" style={{ height: 'calc(70vh - 60px)' }}>
+                {conversations.map(conv => (
+                  <div
+                    key={conv.id}
+                    onClick={() => loadConversation(conv)}
+                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
+                      selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-medium text-sm">
+                          {conv.other_user?.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <p className="font-medium text-gray-800 truncate">{conv.other_user?.name}</p>
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                            {conv.last_message ? formatTime(conv.last_message.created_at) : ''}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{conv.listing?.title}</p>
+                        {conv.last_message && (
+                          <p className="text-sm text-gray-400 truncate">
+                            {conv.last_message.is_mine ? 'Tú: ' : ''}{conv.last_message.content}
+                          </p>
+                        )}
+                      </div>
+                      {conv.unread_count > 0 && (
+                        <span className="bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                          {conv.unread_count}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Vista de conversación */}
+          <div className={`flex-1 flex flex-col ${!selectedConversation ? 'hidden md:flex' : ''}`}>
+            {selectedConversation ? (
+              <>
+                {/* Header de conversación */}
+                <div className="p-4 border-b flex items-center gap-3">
+                  <button 
+                    onClick={() => setSelectedConversation(null)}
+                    className="md:hidden p-1 hover:bg-gray-100 rounded"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-medium">
+                      {selectedConversation.other_user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">{selectedConversation.other_user?.name}</p>
+                    <p className="text-sm text-gray-500">{selectedConversation.listing?.title}</p>
+                  </div>
+                </div>
+
+                {/* Mensajes */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                  {messages.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">Inicia la conversación</p>
+                    </div>
+                  ) : (
+                    messages.map((msg, index) => (
+                      <div
+                        key={msg.id || index}
+                        className={`flex ${msg.is_mine ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs md:max-w-md px-4 py-2 rounded-lg ${
+                            msg.is_mine
+                              ? 'bg-blue-600 text-white rounded-br-none'
+                              : 'bg-white text-gray-800 rounded-bl-none shadow'
+                          }`}
+                        >
+                          <p>{msg.content}</p>
+                          <p className={`text-xs mt-1 ${msg.is_mine ? 'text-blue-200' : 'text-gray-400'}`}>
+                            {formatTime(msg.created_at)}
+                            {msg.is_mine && msg.read && ' ✓✓'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input de mensaje */}
+                <form onSubmit={handleSendMessage} className="p-4 border-t bg-white">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Escribe un mensaje..."
+                      className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      disabled={sending}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newMessage.trim() || sending}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Selecciona una conversación</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      <div className="border-t mt-8 pt-8 text-center text-sm text-gray-600">
-        © 2025 CampusMarket. Todos los derechos reservados.
+    </main>
+  );
+};
+
+// ==================== FOOTER ====================
+const Footer = () => (
+  <footer className="bg-white border-t mt-auto">
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="text-center text-sm text-gray-600">
+        © 2025 CampusMarket - ExPol Marketplace. Proyecto de Lenguajes de Programación ESPOL.
       </div>
     </div>
   </footer>
 );
 
-// Main App
+// ==================== MAIN APP ====================
 export default function ExPolApp() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [favorites, setFavorites] = useState([1, 3, 6]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [selectedListing, setSelectedListing] = useState(null);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [searchFilters, setSearchFilters] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [favoritesRefreshKey, setFavoritesRefreshKey] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [selectedConversation, setSelectedConversation] = useState(null);
 
-  const currentUser = mockUsers[0];
+  useEffect(() => {
+    const savedUser = authService.getCurrentUser();
+    if (savedUser) {
+      setCurrentUser(savedUser);
+    }
+    loadListings();
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadFavorites();
+    }
+  }, [currentUser]);
+
+  const loadListings = async () => {
+    try {
+      const data = await listingsService.getAll();
+      setListings(data.listings || []);
+    } catch (error) {
+      console.error('Error cargando listings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFavorites = async () => {
+    try {
+      const data = await favoritesService.getAll();
+      setFavorites(data.map(f => f.listing_id));
+    } catch (error) {
+      console.error('Error cargando favoritos:', error);
+      setFavorites([]);
+    }
+  };
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  const handleLogin = async (email, password) => {
+    const data = await authService.login(email, password);
+    setCurrentUser(data.user);
+    showToast(`¡Bienvenido ${data.user.name}!`, 'success');
+  };
+
+  const handleRegister = async (userData) => {
+    const data = await authService.register(userData);
+    setCurrentUser(data.user);
+    showToast('¡Cuenta creada exitosamente!', 'success');
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentUser(null);
+    setFavorites([]);
+    setUnreadMessages(0);
+    showToast('Sesión cerrada', 'info');
+    setCurrentPage('home');
+  };
 
   const handleNavigate = (page, data = null) => {
     setCurrentPage(page);
-    if (page === 'detail') {
-      setSelectedListing(data);
-    } else if (page === 'profile') {
-      setSelectedUser(data || currentUser);
-    } else if (page === 'search') {
-      setSearchFilters(data);
-    }
+    if (page === 'detail') setSelectedListing(data);
+    else if (page === 'search') setSearchFilters(data);
     window.scrollTo(0, 0);
   };
 
@@ -1576,12 +1418,38 @@ export default function ExPolApp() {
     handleNavigate('search', { query });
   };
 
-  const handleFavorite = (listingId) => {
-    setFavorites(prev =>
-      prev.includes(listingId)
-        ? prev.filter(id => id !== listingId)
-        : [...prev, listingId]
-    );
+  const handleCategorySelect = (category) => {
+    setSearchFilters({ category });
+    setCurrentPage('search');
+    window.scrollTo(0, 0);
+  };
+
+  const handleFavorite = async (listingId) => {
+    if (!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    try {
+      if (favorites.includes(listingId)) {
+        await favoritesService.removeByListing(listingId);
+        setFavorites(prev => prev.filter(id => id !== listingId));
+        showToast('Eliminado de favoritos', 'info');
+      } else {
+        await favoritesService.add(listingId);
+        setFavorites(prev => [...prev, listingId]);
+        showToast('Agregado a favoritos', 'success');
+      }
+      setFavoritesRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error con favoritos:', error);
+      showToast('Error al actualizar favoritos', 'error');
+    }
+  };
+
+  const handleStartConversation = (conversation) => {
+    setSelectedConversation(conversation);
+    setCurrentPage('messages');
   };
 
   return (
@@ -1590,18 +1458,26 @@ export default function ExPolApp() {
         onSearch={handleSearch}
         currentUser={currentUser}
         onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        onLoginClick={() => setShowLoginModal(true)}
+        onCategorySelect={handleCategorySelect}
+        unreadMessages={unreadMessages}
       />
 
       {currentPage === 'home' && (
         <HomePage
+          listings={listings}
           onNavigate={handleNavigate}
           favorites={favorites}
           onFavorite={handleFavorite}
+          currentUser={currentUser}
+          loading={loading}
         />
       )}
 
       {currentPage === 'search' && (
         <SearchPage
+          key={JSON.stringify(searchFilters)}
           initialFilters={searchFilters}
           favorites={favorites}
           onFavorite={handleFavorite}
@@ -1611,38 +1487,65 @@ export default function ExPolApp() {
 
       {currentPage === 'favorites' && (
         <FavoritesPage
-          favorites={favorites}
           onFavorite={handleFavorite}
           onNavigate={handleNavigate}
+          currentUser={currentUser}
+          refreshKey={favoritesRefreshKey}
         />
       )}
 
       {currentPage === 'profile' && (
         <ProfilePage
-          userId={selectedUser?.id || currentUser.id}
+          currentUser={currentUser}
           onNavigate={handleNavigate}
-          currentUserId={currentUser.id}
+          showToast={showToast}
         />
       )}
 
-      {currentPage === 'detail' && selectedListing && (
+      {currentPage === 'detail' && (
         <ProductDetailPage
           listing={selectedListing}
           onNavigate={handleNavigate}
           onFavorite={handleFavorite}
-          isFavorited={favorites.includes(selectedListing.id)}
+          isFavorited={favorites.includes(selectedListing?.id)}
+          currentUser={currentUser}
+          showToast={showToast}
+          onStartConversation={handleStartConversation}
         />
       )}
 
       {currentPage === 'messages' && (
-        <MessagesPage onNavigate={handleNavigate} />
+        <MessagesPage 
+          currentUser={currentUser} 
+          showToast={showToast}
+          onUpdateUnread={setUnreadMessages}
+        />
       )}
 
       {currentPage === 'create' && (
-        <CreateListingPage onNavigate={handleNavigate} />
+        <CreateListingPage
+          onNavigate={handleNavigate}
+          currentUser={currentUser}
+          showToast={showToast}
+        />
       )}
 
       <Footer />
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
