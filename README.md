@@ -13,6 +13,47 @@ Plataforma de compra y venta entre estudiantes universitarios desarrollada como 
 
 ---
 
+## 🛠️ Tecnologías y Versiones
+
+### Backend (Rails API)
+| Tecnología | Versión |
+|------------|---------|
+| Ruby | 3.2.10 |
+| Rails | 7.1.x |
+| PostgreSQL | 15+ |
+| Puma | 6.4.x |
+| JWT | (última) |
+| Bcrypt | 3.1.7 |
+| Redis | (última) |
+| Kaminari | (última) |
+
+### Frontend (React)
+| Tecnología | Versión |
+|------------|---------|
+| React | 19.2.0 |
+| React DOM | 19.2.0 |
+| Vite | 7.2.4 |
+| Tailwind CSS | 4.1.18 |
+| Lucide React | 0.562.0 |
+| ESLint | 9.39.1 |
+
+### Servicio de Tiempo Real (Go)
+| Tecnología | Versión |
+|------------|---------|
+| Go | 1.21 |
+| Gorilla WebSocket | 1.5.3 |
+| Go-Redis | 9.17.2 |
+
+### Infraestructura
+| Tecnología | Versión Recomendada |
+|------------|---------------------|
+| Docker | 24.0+ |
+| Docker Compose | 2.20+ |
+| Node.js | 20+ (LTS) |
+| npm | 10+ |
+
+---
+
 ## 📋 Requisitos Previos
 
 Antes de comenzar, asegúrese de tener instalado:
