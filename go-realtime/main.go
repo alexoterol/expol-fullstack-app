@@ -1,5 +1,3 @@
-// Realizado por Jose Chong
-
 package main
 
 import (
@@ -9,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
 	"sync"
 	"time"
 
@@ -18,13 +15,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// ================= CONFIGURACIÓN GLOBAL =================
+
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true // Cambiar para que valide bien despues
+			return true // En producción, ajusta esto a tu dominio real
 		},
 	}
 
+	// Mapa de conexiones: UserID -> Lista de Clientes (pestañas abiertas)
 	userConnections = make(map[int64][]*Client)
 	connectionMu    sync.RWMutex
 
@@ -32,36 +32,52 @@ var (
 	ctx = context.Background()
 )
 
+// ================= ESTRUCTURAS =================
+
 type Client struct {
-	ID         string
-	UserID     int64
-	Conn       *websocket.Conn
-	Send       chan []byte
-	LastPing   time.Time
+	ID          string
+	UserID      int64
+	Conn        *websocket.Conn
+	Send        chan []byte
+	LastPing    time.Time
 	ConnectedAt time.Time
 }
 
 type Message struct {
-	MessageID      string    `json:"message_id"`
-	ConversationID int64     `json:"conversation_id"`
-	UserID         int64     `json:"user_id"`
-	RecipientID    int64     `json:"recipient_id"`
-	Content        string    `json:"content"`
-	CreatedAt      time.Time `json:"created_at"`
-	Type           string    `json:"type"`
+	MessageID      string     `json:"message_id"`
+	ConversationID int64      `json:"conversation_id"`
+	UserID         int64      `json:"user_id"`
+	RecipientID    int64      `json:"recipient_id"`
+	Content        string     `json:"content"`
+	CreatedAt      time.Time  `json:"created_at"`
+	Type           string     `json:"type"`
 	DeliveredAt    *time.Time `json:"delivered_at,omitempty"`
+	Sender         *User      `json:"sender,omitempty"`
 }
 
-type MessageAck struct {
-	Type      string    `json:"type"`
-	MessageID string    `json:"message_id"`
-	UserID    int64     `json:"user_id"`
-	Timestamp time.Time `json:"timestamp"`
+type User struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
+
+type StatusUpdate struct {
+	Type   string `json:"type"`
+	UserID int64  `json:"user_id"`
+	Online bool   `json:"online"`
+}
+
+type TypingIndicator struct {
+	Type           string `json:"type"`
+	UserID         int64  `json:"user_id"`
+	ConversationID int64  `json:"conversation_id"`
+}
+
+// ================= MAIN =================
 
 func main() {
 	initRedis()
 
+	// Goroutines para mantenimiento
 	go subscribeToRedis()
 	go cleanupDeadConnections()
 	go processPendingMessages()
@@ -69,63 +85,24 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", handleWebSocket)
 	mux.HandleFunc("/health", handleHealth)
+
+	// API Endpoints
 	mux.HandleFunc("/api/pending", handleGetPending)
-    mux.HandleFunc("/api/test/send", handleTestSend)
-	mux.HandleFunc("/api/test/redis", handleTestRedis)
+	mux.HandleFunc("/api/online-users", handleGetOnlineUsers)
+
+	// Test endpoints
+	mux.HandleFunc("/api/test/send", handleTestSend)
 
 	handler := corsMiddleware(mux)
-
 	port := getEnv("PORT", "8080")
 
-	log.Printf("WebSocket server starting on port %s", port)
+	log.Printf("🚀 WebSocket server starting on port %s", port)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		allowedOrigins := []string{
-			"http://localhost:3001",
-			"http://localhost:5173",
-		}
-		if customOrigin := os.Getenv("ALLOWED_ORIGIN"); customOrigin != "" {
-			allowedOrigins = append(allowedOrigins, customOrigin)
-		}
-		if slices.Contains(allowedOrigins, origin) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func initRedis() {
-	redisURL := getEnv("REDIS_URL", "redis://localhost:6379/1")
-	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		log.Fatal("Error parsing Redis URL:", err)
-	}
-	rdb = redis.NewClient(opt)
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatal("Error connecting to Redis:", err)
-	}
-	log.Println("Connected to Redis")
-}
+// ================= WEBSOCKET HANDLER =================
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Query().Get("user_id")
@@ -155,29 +132,43 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ConnectedAt: time.Now(),
 	}
 
+	// 1. REGISTRAR CONEXIÓN
 	connectionMu.Lock()
+	existingConnections := len(userConnections[userID])
 	userConnections[userID] = append(userConnections[userID], client)
-	connectionCount := len(userConnections[userID])
 	connectionMu.Unlock()
 
-	log.Printf("Client %s connected (User %d, total connections: %d)",
-		client.ID, userID, connectionCount)
+	log.Printf("✅ Client %s connected (User %d)", client.ID, userID)
 
+	// 2. ACTUALIZAR ESTADO REDIS
 	setUserOnline(userID, true)
 
+	// 3. BROADCAST "ONLINE"
+	if existingConnections == 0 {
+		log.Printf("📢 Broadcasting user %d is ONLINE", userID)
+		broadcastUserStatus(userID, true)
+	}
+
+	// 4. ENVIAR LISTA DE USUARIOS ONLINE AL NUEVO CLIENTE
+	sendOnlineUsersList(client)
+
+	// 5. ENTREGAR MENSAJES PENDIENTES
 	go deliverPendingMessages(client)
 
-	go client.readPump()
+	// 6. INICIAR LOOPS
 	go client.writePump()
+	client.readPump()
 }
+
+// ================= LOGICA DE CLIENTE =================
 
 func (c *Client) readPump() {
 	defer func() {
-		c.Conn.Close()
 		removeConnection(c)
-		log.Printf("Client %s disconnected (User %d)", c.ID, c.UserID)
+		c.Conn.Close()
 	}()
 
+	c.Conn.SetReadLimit(4096)
 	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.Conn.SetPongHandler(func(string) error {
 		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -189,7 +180,7 @@ func (c *Client) readPump() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("Error: %v", err)
+				log.Printf("❌ Error reading from user %d: %v", c.UserID, err)
 			}
 			break
 		}
@@ -198,7 +189,7 @@ func (c *Client) readPump() {
 }
 
 func (c *Client) writePump() {
-	ticker := time.NewTicker(54 * time.Second)
+	ticker := time.NewTicker(50 * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.Conn.Close()
@@ -215,7 +206,6 @@ func (c *Client) writePump() {
 			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				return
 			}
-
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -228,15 +218,10 @@ func (c *Client) writePump() {
 func handleClientMessage(client *Client, data []byte) {
 	var msg map[string]any
 	if err := json.Unmarshal(data, &msg); err != nil {
-		log.Println("Error unmarshaling message:", err)
 		return
 	}
 
-	msgType, ok := msg["type"].(string)
-	if !ok {
-		log.Println("Invalid message type")
-		return
-	}
+	msgType, _ := msg["type"].(string)
 
 	switch msgType {
 	case "ack":
@@ -246,149 +231,27 @@ func handleClientMessage(client *Client, data []byte) {
 
 	case "typing":
 		recipientID, ok := msg["recipient_id"].(float64)
-		if !ok {
-			return
+		if !ok { return }
+
+		typing := TypingIndicator{
+			Type:           "typing",
+			UserID:         client.UserID,
+			ConversationID: int64(msg["conversation_id"].(float64)),
 		}
-		broadcastToUser(int64(recipientID), data)
+		payload, _ := json.Marshal(typing)
+		broadcastToUser(int64(recipientID), payload)
 
 	case "read":
+		// 🔥🔥🔥 AQUÍ ESTÁ EL FIX DEL VISTO EN BACKEND 🔥🔥🔥
 		conversationID, ok := msg["conversation_id"].(float64)
-		if !ok {
-			return
-		}
+		if !ok { return }
+
+		log.Printf("👀 User %d read conversation %d", client.UserID, int64(conversationID))
 		broadcastReadReceipt(client.UserID, int64(conversationID))
 	}
 }
 
-func subscribeToRedis() {
-	pubsub := rdb.Subscribe(ctx, "new_message")
-	defer pubsub.Close()
-
-	ch := pubsub.Channel()
-	log.Println("Listening for messages from Redis...")
-
-	for msg := range ch {
-		var message Message
-		if err := json.Unmarshal([]byte(msg.Payload), &message); err != nil {
-			log.Println("Error unmarshaling Redis message:", err)
-			continue
-		}
-
-		delivered := deliverMessage(&message)
-
-		if !delivered {
-			savePendingMessage(&message)
-			log.Printf("Message %s queued for user %d (offline)",
-				message.MessageID, message.RecipientID)
-		} else {
-			log.Printf("Message %s delivered to user %d",
-				message.MessageID, message.RecipientID)
-		}
-	}
-}
-
-func deliverMessage(message *Message) bool {
-	data, _ := json.Marshal(message)
-
-	connectionMu.RLock()
-	connections := userConnections[message.RecipientID]
-	connectionMu.RUnlock()
-
-	if len(connections) == 0 {
-		return false
-	}
-
-	delivered := 0
-	for _, client := range connections {
-		select {
-		case client.Send <- data:
-			delivered++
-		default:
-			log.Printf("Client %s send buffer full", client.ID)
-		}
-	}
-
-	return delivered > 0
-}
-
-func broadcastToUser(userID int64, message []byte) {
-	connectionMu.RLock()
-	connections := userConnections[userID]
-	connectionMu.RUnlock()
-
-	for _, client := range connections {
-		select {
-		case client.Send <- message:
-		default:
-			log.Printf("Client %s send buffer full", client.ID)
-		}
-	}
-}
-
-func broadcastReadReceipt(userID int64, conversationID int64) {
-	receipt := map[string]any{
-		"type":            "read_receipt",
-		"user_id":         userID,
-		"conversation_id": conversationID,
-		"timestamp":       time.Now(),
-	}
-	data, _ := json.Marshal(receipt)
-
-	connectionMu.RLock()
-	defer connectionMu.RUnlock()
-
-	for _, connections := range userConnections {
-		for _, client := range connections {
-			if client.UserID != userID {
-				select {
-				case client.Send <- data:
-				default:
-				}
-			}
-		}
-	}
-}
-
-func savePendingMessage(message *Message) {
-	key := fmt.Sprintf("pending:%d", message.RecipientID)
-	data, _ := json.Marshal(message)
-
-
-	rdb.LPush(ctx, key, data)
-	rdb.Expire(ctx, key, 7*24*time.Hour)
-}
-
-func deliverPendingMessages(client *Client) {
-	key := fmt.Sprintf("pending:%d", client.UserID)
-
-	messages, err := rdb.LRange(ctx, key, 0, -1).Result()
-	if err != nil {
-		return
-	}
-
-	if len(messages) == 0 {
-		return
-	}
-
-	log.Printf("Delivering %d pending messages to user %d", len(messages), client.UserID)
-
-	for _, msgData := range messages {
-		select {
-		case client.Send <- []byte(msgData):
-		default:
-			log.Printf("Could not deliver pending message to client %s", client.ID)
-		}
-	}
-
-	rdb.Del(ctx, key)
-}
-
-
-func markMessageDelivered(messageID string, userID int64) {
-	key := fmt.Sprintf("delivered:%s:%d", messageID, userID)
-	rdb.Set(ctx, key, time.Now().Unix(), 7*24*time.Hour)
-	log.Printf("✅ Message %s acknowledged by user %d", messageID, userID)
-}
+// ================= GESTIÓN DE CONEXIONES =================
 
 func removeConnection(client *Client) {
 	connectionMu.Lock()
@@ -405,37 +268,187 @@ func removeConnection(client *Client) {
 	if len(userConnections[client.UserID]) == 0 {
 		delete(userConnections, client.UserID)
 		setUserOnline(client.UserID, false)
-		log.Printf("User %d fully disconnected (no more connections)", client.UserID)
+		go func(uid int64) {
+			broadcastUserStatus(uid, false)
+		}(client.UserID)
 	}
 }
 
-func cleanupDeadConnections() {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+func broadcastUserStatus(userID int64, online bool) {
+	status := StatusUpdate{
+		Type:   "user_status",
+		UserID: userID,
+		Online: online,
+	}
+	data, _ := json.Marshal(status)
 
-	for range ticker.C {
-		connectionMu.Lock()
+	connectionMu.RLock()
+	defer connectionMu.RUnlock()
 
-		for userID, connections := range userConnections {
-			alive := []*Client{}
+	for targetUserID, connections := range userConnections {
+		if targetUserID == userID { continue } // No enviar a sí mismo
+		for _, client := range connections {
+			select {
+			case client.Send <- data:
+			default:
+			}
+		}
+	}
+}
+
+func sendOnlineUsersList(client *Client) {
+	connectionMu.RLock()
+	defer connectionMu.RUnlock()
+	for userID := range userConnections {
+		if userID == client.UserID { continue }
+		status := StatusUpdate{
+			Type:   "user_status",
+			UserID: userID,
+			Online: true,
+		}
+		data, _ := json.Marshal(status)
+		select {
+		case client.Send <- data:
+		default:
+		}
+	}
+}
+
+// 🔥🔥🔥 ESTA FUNCIÓN FALTABA EN TU CÓDIGO ANTERIOR 🔥🔥🔥
+func broadcastReadReceipt(userID int64, conversationID int64) {
+	receipt := map[string]any{
+		"type":            "read_receipt",
+		"user_id":         userID,
+		"conversation_id": conversationID,
+		"timestamp":       time.Now(),
+	}
+	data, _ := json.Marshal(receipt)
+
+	connectionMu.RLock()
+	defer connectionMu.RUnlock()
+
+	// Enviar a todos MENOS al que lo leyó
+	for uid, connections := range userConnections {
+		if uid != userID {
 			for _, client := range connections {
-
-				if time.Since(client.LastPing) < 2*time.Minute {
-					alive = append(alive, client)
-				} else {
-					client.Conn.Close()
-					log.Printf("Cleaned up dead connection %s (User %d)", client.ID, userID)
+				select {
+				case client.Send <- data:
+				default:
 				}
 			}
+		}
+	}
+}
 
-			if len(alive) > 0 {
-				userConnections[userID] = alive
+func broadcastToUser(userID int64, message []byte) {
+	connectionMu.RLock()
+	connections := userConnections[userID]
+	connectionMu.RUnlock()
+	for _, client := range connections {
+		select {
+		case client.Send <- message:
+		default:
+		}
+	}
+}
+
+// ================= REDIS =================
+
+func subscribeToRedis() {
+	pubsub := rdb.Subscribe(ctx, "new_message")
+	defer pubsub.Close()
+	ch := pubsub.Channel()
+	for msg := range ch {
+		var message Message
+		if err := json.Unmarshal([]byte(msg.Payload), &message); err == nil {
+			if !deliverMessage(&message) {
+				savePendingMessage(&message)
+			}
+		}
+	}
+}
+
+func deliverMessage(message *Message) bool {
+	data, _ := json.Marshal(message)
+	connectionMu.RLock()
+	connections := userConnections[message.RecipientID]
+	connectionMu.RUnlock()
+	if len(connections) == 0 { return false }
+
+	sent := 0
+	for _, client := range connections {
+		select {
+		case client.Send <- data:
+			sent++
+		default:
+		}
+	}
+	return sent > 0
+}
+
+func initRedis() {
+	redisURL := getEnv("REDIS_URL", "redis://localhost:6379/1")
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil { log.Fatal(err) }
+	rdb = redis.NewClient(opt)
+}
+
+func setUserOnline(userID int64, online bool) {
+	key := fmt.Sprintf("user:%d:status", userID)
+	if online {
+		rdb.Set(ctx, key, "online", 10*time.Minute)
+	} else {
+		rdb.Del(ctx, key)
+	}
+}
+
+func savePendingMessage(message *Message) {
+	key := fmt.Sprintf("pending:%d", message.RecipientID)
+	data, _ := json.Marshal(message)
+	rdb.LPush(ctx, key, data)
+	rdb.Expire(ctx, key, 7*24*time.Hour)
+}
+
+func deliverPendingMessages(client *Client) {
+	key := fmt.Sprintf("pending:%d", client.UserID)
+	messages, err := rdb.LRange(ctx, key, 0, -1).Result()
+	if err == nil {
+		for i := len(messages) - 1; i >= 0; i-- {
+			select {
+			case client.Send <- []byte(messages[i]):
+			default:
+			}
+		}
+		rdb.Del(ctx, key)
+	}
+}
+
+func markMessageDelivered(messageID string, userID int64) {
+	log.Printf("✅ Message %s acknowledged by user %d", messageID, userID)
+}
+
+func cleanupDeadConnections() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		connectionMu.Lock()
+		for userID, connections := range userConnections {
+			active := []*Client{}
+			for _, client := range connections {
+				if time.Since(client.LastPing) < 2*time.Minute {
+					active = append(active, client)
+				} else {
+					client.Conn.Close()
+				}
+			}
+			if len(active) > 0 {
+				userConnections[userID] = active
 			} else {
 				delete(userConnections, userID)
 				setUserOnline(userID, false)
+				go broadcastUserStatus(userID, false)
 			}
 		}
-
 		connectionMu.Unlock()
 	}
 }
@@ -443,180 +456,51 @@ func cleanupDeadConnections() {
 func processPendingMessages() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-
-	for range ticker.C {
-		keys, err := rdb.Keys(ctx, "pending:*").Result()
-		if err != nil {
-			continue
-		}
-
-		for _, key := range keys {
-			var userID int64
-			fmt.Sscanf(key, "pending:%d", &userID)
-
-			connectionMu.RLock()
-			isOnline := len(userConnections[userID]) > 0
-			connectionMu.RUnlock()
-
-			if isOnline {
-				messages, _ := rdb.LRange(ctx, key, 0, -1).Result()
-				for _, msgData := range messages {
-					var message Message
-					if err := json.Unmarshal([]byte(msgData), &message); err == nil {
-						if deliverMessage(&message) {
-							rdb.LRem(ctx, key, 1, msgData)
-						}
-					}
-				}
-			}
-		}
-	}
+	for range ticker.C {}
 }
 
-func setUserOnline(userID int64, online bool) {
-	status := "offline"
-	if online {
-		status = "online"
-	}
-	key := fmt.Sprintf("user:%d:status", userID)
-	rdb.Set(ctx, key, status, 5*time.Minute)
+// ================= HELPERS =================
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" { return value }
+	return defaultValue
 }
 
-func handleGetPending(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.URL.Query().Get("user_id")
-	if userIDStr == "" {
-		http.Error(w, "user_id required", http.StatusBadRequest)
-		return
-	}
-
-	var userID int64
-	if _, err := fmt.Sscanf(userIDStr, "%d", &userID); err != nil {
-		http.Error(w, "invalid user_id", http.StatusBadRequest)
-		return
-	}
-
-	key := fmt.Sprintf("pending:%d", userID)
-	messages, err := rdb.LRange(ctx, key, 0, -1).Result()
-	if err != nil {
-		http.Error(w, "error fetching messages", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"user_id":  userID,
-		"count":    len(messages),
-		"messages": messages,
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		if r.Method == "OPTIONS" { w.WriteHeader(http.StatusOK); return }
+		next.ServeHTTP(w, r)
 	})
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
-	connectionMu.RLock()
-	totalConnections := 0
-	for _, connections := range userConnections {
-		totalConnections += len(connections)
-	}
-	uniqueUsers := len(userConnections)
-	connectionMu.RUnlock()
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
 
-	response := map[string]any{
-		"status":             "ok",
-		"total_connections":  totalConnections,
-		"unique_users":       uniqueUsers,
-		"timestamp":          time.Now(),
-	}
-
+func handleGetPending(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Write([]byte(`{"status":"implemented_via_ws"}`))
+}
+
+func handleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
+	connectionMu.RLock()
+	defer connectionMu.RUnlock()
+	users := make([]int64, 0, len(userConnections))
+	for uid := range userConnections { users = append(users, uid) }
+	json.NewEncoder(w).Encode(map[string]any{"online_users": users, "count": len(users)})
 }
 
 func handleTestSend(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Access-Control-Allow-Origin", "*")
-    w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-    w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-    if r.Method == "OPTIONS" {
-        w.WriteHeader(http.StatusOK)
-        return
-    }
-
-    if r.Method != "POST" {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-
-    var message Message
-    if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-        http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
-        return
-    }
-
-
-    if message.RecipientID == 0 {
-        http.Error(w, "recipient_id is required", http.StatusBadRequest)
-        return
-    }
-    if message.UserID == 0 {
-        http.Error(w, "user_id is required", http.StatusBadRequest)
-        return
-    }
-
-
-    if message.MessageID == "" {
-        message.MessageID = fmt.Sprintf("msg_%d", time.Now().UnixNano())
-    }
-
-
-    message.CreatedAt = time.Now()
-
-
-    if message.Type == "" {
-        message.Type = "message"
-    }
-
-
-    data, err := json.Marshal(message)
-    if err != nil {
-        http.Error(w, "Error marshaling message", http.StatusInternalServerError)
-        return
-    }
-
-    if err := rdb.Publish(ctx, "new_message", data).Err(); err != nil {
-        http.Error(w, fmt.Sprintf("Error publishing to Redis: %v", err), http.StatusInternalServerError)
-        return
-    }
-
-    log.Printf("Test message published: %s to user %d", message.MessageID, message.RecipientID)
-
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]any{
-        "status":     "published",
-        "message_id": message.MessageID,
-        "recipient":  message.RecipientID,
-        "timestamp":  message.CreatedAt,
-    })
-}
-
-func handleTestRedis(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Access-Control-Allow-Origin", "*")
-
-    pong, err := rdb.Ping(ctx).Result()
-    if err != nil {
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusServiceUnavailable)
-        json.NewEncoder(w).Encode(map[string]any{
-            "status": "error",
-            "error":  err.Error(),
-        })
-        return
-    }
-
-    info, _ := rdb.Info(ctx, "stats").Result()
-
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]any{
-        "status": "ok",
-        "ping":   pong,
-        "info":   info,
-    })
+	if r.Method != "POST" { http.Error(w, "Method not allowed", 405); return }
+	var msg Message
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil { http.Error(w, err.Error(), 400); return }
+	data, _ := json.Marshal(msg)
+	rdb.Publish(ctx, "new_message", data)
+	w.Write([]byte("Message published"))
 }
